@@ -37,7 +37,7 @@ uv tool install git+https://github.com/LeeGyeongPil/limitpilot
 limitpilot --version
 ```
 ```text
-limitpilot 0.1.0
+limitpilot 0.1.1
 ```
 
 설치 없이 저장소에서 바로 실행할 수도 있습니다(이 문서의 명령 앞 `limitpilot` 을 `PYTHONPATH=src python3 -B -m limitpilot` 으로 바꿔 읽으면 됩니다).
@@ -216,7 +216,7 @@ Error: <폴더>/partial.env is missing ANTHROPIC_MODEL, ANTHROPIC_AUTH_TOKEN - a
 limitpilot --demo --lang en doctor
 ```
 ```text
-ok    limitpilot 0.1.0 — Python 3.15.2 on darwin
+ok    limitpilot 0.1.1 — Python 3.15.2 on darwin
 ok    credential store — fake
 ok    ~/.claude.json — oauthAccount found
 ok    daemon not installed — `limitpilot install-daemon` turns on watching
@@ -446,20 +446,11 @@ migrate --dry-run (nothing will be changed):
 
 마지막 `note:` 줄은 연습 모드가 새 상태 폴더를 미리 만들어 두므로 항상 나옵니다. 실제 PC 에 limitpilot 상태가 이미 있으면 `migrate` 는 1단계 전에 멈춥니다. (경로는 `...` 로 줄였습니다.) 자세한 단계는 [docs/migrating.md](docs/migrating.md).
 
-## 다른 도구와 비교
+## 언제 쓰나
 
-[realiti4/claude-swap](https://github.com/realiti4/claude-swap)(MIT, 별 4.5k, 2026-11-10 확인)은 TUI·자동 순환·세션 모드를 가진, 이 분야에서 더 널리 쓰이는 도구입니다.
-
-| | LimitPilot | claude-swap |
-|---|---|---|
-| 런타임 외부 패키지 | 없음(표준 라이브러리) | 확인하지 않음 |
-| 상주 UI | macOS 메뉴바 + Windows 트레이 + 로컬 대시보드 | TUI |
-| 자동 전환 | 옵트인, 계정별 임계·주간 최대치·리셋 임박 우선 | 자동 순환 |
-| 전환 검증 | 쓰기 후 다시 읽기, 실패 시 되돌리기 | 확인하지 않음 |
-| 연습 모드 | 있음(`--demo`) | 확인하지 않음 |
-| 커뮤니티·성숙도 | 새 프로젝트(0.1.0) | 더 큼 |
-
-이 표는 각 저장소 소개를 바탕으로 한 것이며 "확인하지 않음" 칸은 비교하지 못했다는 뜻입니다. 성숙도·커뮤니티가 중요하면 claude-swap 이 더 나은 선택일 수 있습니다.
+- 외부 패키지 없이 표준 라이브러리만으로 된 코드를 직접 읽고 고쳐 쓰고 싶을 때.
+- macOS 메뉴바·Windows 트레이에서 계정별 남은 양을 보고, 옵트인 자동 전환을 쓰고 싶을 때.
+- 터미널 TUI 를 원하면 [realiti4/claude-swap](https://github.com/realiti4/claude-swap) 도 살펴보세요.
 
 ## 자주 겪는 문제
 
