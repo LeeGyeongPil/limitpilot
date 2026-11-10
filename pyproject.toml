@@ -1,6 +1,6 @@
 [project]
 name = "limitpilot"
-version = "0.1.1"  # src/limitpilot/__init__.py 의 __version__ 과 같아야 한다(tests/test_packaging.py 가 확인)
+version = "0.1.2"  # src/limitpilot/__init__.py 의 __version__ 과 같아야 한다(tests/test_packaging.py 가 확인)
 description = "See Claude Code usage per account in your menu bar / tray and switch accounts before a limit hits (opt-in). Zero dependencies."
 readme = "README.md"
 requires-python = ">=3.10"

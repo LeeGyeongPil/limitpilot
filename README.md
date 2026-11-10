@@ -37,7 +37,7 @@ uv tool install git+https://github.com/LeeGyeongPil/limitpilot
 limitpilot --version
 ```
 ```text
-limitpilot 0.1.1
+limitpilot 0.1.2
 ```
 
 설치 없이 저장소에서 바로 실행할 수도 있습니다(이 문서의 명령 앞 `limitpilot` 을 `PYTHONPATH=src python3 -B -m limitpilot` 으로 바꿔 읽으면 됩니다).
@@ -216,7 +216,7 @@ Error: <폴더>/partial.env is missing ANTHROPIC_MODEL, ANTHROPIC_AUTH_TOKEN - a
 limitpilot --demo --lang en doctor
 ```
 ```text
-ok    limitpilot 0.1.1 — Python 3.15.2 on darwin
+ok    limitpilot 0.1.2 — Python 3.15.2 on darwin
 ok    credential store — fake
 ok    ~/.claude.json — oauthAccount found
 ok    daemon not installed — `limitpilot install-daemon` turns on watching
@@ -291,7 +291,7 @@ limitpilot --demo --lang en remove 99
 [2026-11-10 09:20:32] Error: Slot 99 is not registered
 ```
 
-`--lang en` 은 파이썬 패키지의 모든 출력(명령 출력·로그·알림·오류·대시보드 응답)에 적용됩니다. 지정하지 않으면 OS 로케일을 따릅니다(예: `limitpilot gateway-add --help` 는 한국어 로케일에서 한국어 도움말). 예외는 Windows 트레이(`tray.cs`·`tray.ps1`)의 고정 한국어 문구와, 이미 기록된 `state.json`·`limitpilot.log` 의 옛 줄입니다.
+`--lang en`·`--lang ko` 는 파이썬 패키지의 거의 모든 출력(명령 출력·`doctor`·`migrate --dry-run`·`widget --dry-run`·로그·알림·오류·대시보드 응답)에 적용됩니다. 지정하지 않으면 OS 로케일을 따릅니다(예: `limitpilot gateway-add --help` 는 한국어 로케일에서 한국어 도움말). 예외는 Windows 트레이(`tray.cs`·`tray.ps1`)의 고정 한국어 문구, `migrate --purge-legacy`·실제 `migrate` 실행 출력·실제 `widget build` 메시지, `widget install`·`uninstall` 실제 실행 메시지, 옛 데이터가 없을 때 `migrate --dry-run` 의 `nothing to migrate` 줄, argparse 기본 문구(`usage`·`options`·오류 메시지)(모두 영어로 남습니다), 그리고 이미 기록된 `state.json`·`limitpilot.log` 의 옛 줄입니다.
 
 ## 설정
 
