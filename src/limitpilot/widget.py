@@ -16,6 +16,7 @@ from importlib import resources
 
 from limitpilot import __version__
 from limitpilot.daemon import deploy
+from limitpilot import i18n
 from limitpilot import paths
 
 APP_NAME = "LimitPilot.app"
@@ -52,7 +53,7 @@ def build_macos(out_dir: str, dry_run: bool = False) -> str:
     ]
     if dry_run:
         for s in steps:
-            _say(f"would build: {s}")
+            _say(i18n.t("wid_would_build", step=s))
         return app
     if sys.platform != "darwin" or not swiftc:
         raise SystemExit("widget build needs macOS with the Xcode command line tools (swiftc)")
@@ -92,7 +93,7 @@ def build_windows(out_dir: str, dry_run: bool = False) -> str:
     """Copy the tray sources + pyz to ``out_dir`` and compile tray.exe with csc when present."""
     out_dir = os.path.abspath(out_dir)
     if dry_run:
-        _say(f"would build: {out_dir}\\tray.exe (csc) or tray.ps1 fallback + limitpilot.pyz")
+        _say(i18n.t("wid_would_build_win", out=out_dir))
         return out_dir
     os.makedirs(out_dir, exist_ok=True)
     for name in ("tray.cs", "tray.ps1", "tray-start.cmd"):
@@ -138,7 +139,7 @@ def run(args) -> int:
     target = (args.out or _windows_dir()) if paths.IS_WIN else os.path.join(
         args.out or os.path.join(paths.HOME, "Applications"), APP_NAME)
     if args.dry_run:
-        _say(f"would remove: {target}")
+        _say(i18n.t("wid_would_remove", target=target))
         return 0
     if os.path.isdir(target) and os.path.basename(target) in (APP_NAME, "LimitPilot"):
         shutil.rmtree(target)

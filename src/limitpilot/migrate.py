@@ -252,18 +252,20 @@ def remove_isolated_leftovers() -> int:
 
 def plan_lines(old: dict) -> list:
     slots = _slots(old)
+    if paths.IS_WIN:
+        scheduler = i18n.t("mig_plan_scheduler_win", name=legacy.WIN_TASK_NAME)
+    else:
+        # 화면·스크린샷에 로그인 사용자 이름이 찍히지 않게 자리표시자로
+        scheduler = "launchctl bootout " + legacy.launchd_label().replace(getpass.getuser(), "<user>")
     return [
-        f"1. stop the old daemon: marker {os.path.join(legacy.state_dir(), '.daemon-stopped')}, "
-        + (f"Task Scheduler {legacy.WIN_TASK_NAME}" if paths.IS_WIN
-           # 화면·스크린샷에 로그인 사용자 이름이 찍히지 않게 자리표시자로
-           else "launchctl bootout " + legacy.launchd_label().replace(getpass.getuser(), "<user>")),
-        "2. ask a running old dashboard to exit",
-        f"3. copy state → {paths.state_file()} (settings kept, migratedFrom added)",
-        f"4. copy {len(slots)} slot credential(s) {slots} and read each back; "
-        "then delete the old items",
-        "5. point a gateway apiKeyHelper that calls the old script at limitpilot",
-        "6. remove leftovers of old isolated logins",
-        f"7. write {os.path.join(legacy.state_dir(), legacy.MIGRATED_MARKER)} (old folder kept)",
+        i18n.t("mig_plan_1", marker=os.path.join(legacy.state_dir(), ".daemon-stopped"),
+               scheduler=scheduler),
+        i18n.t("mig_plan_2"),
+        i18n.t("mig_plan_3", path=paths.state_file()),
+        i18n.t("mig_plan_4", count=len(slots), slots=slots),
+        i18n.t("mig_plan_5"),
+        i18n.t("mig_plan_6"),
+        i18n.t("mig_plan_7", path=os.path.join(legacy.state_dir(), legacy.MIGRATED_MARKER)),
     ]
 
 
@@ -280,11 +282,11 @@ def run(dry_run: bool = False, purge_legacy: bool = False) -> int:
     old = _legacy_state()
     has_new_state = os.path.exists(paths.state_file())
     if dry_run:
-        _say("migrate --dry-run (nothing will be changed):")
+        _say(i18n.t("mig_plan_header"))
         for line in plan_lines(old):
             _say("  " + line)
         if has_new_state:
-            _say(f"  note: {paths.state_file()} already exists — a real run stops before step 1")
+            _say("  " + i18n.t("mig_plan_note", path=paths.state_file()))
         return 0
     if has_new_state:
         raise LimitPilotError(i18n.t("mig_state_exists", path=paths.state_file()))

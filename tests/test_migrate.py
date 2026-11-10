@@ -11,6 +11,7 @@ import os
 import unittest
 from unittest import mock
 
+from limitpilot import i18n
 from limitpilot import legacy
 from limitpilot import migrate
 from limitpilot import paths
@@ -160,6 +161,13 @@ class MigrateTests(unittest.TestCase):
         return out
 
     def test_dry_run_changes_nothing(self):
+        # 이 단언은 영어 문구를 고정한다 — 테스트 기본 언어는 ko 이므로 en 으로 바꿨다가 되돌린다
+        previous = i18n._override
+        env = mock.patch.dict(os.environ)
+        env.start()
+        self.addCleanup(env.stop)
+        self.addCleanup(lambda: setattr(i18n, "_override", previous))
+        i18n.set_lang("en")
         before = self._snapshot()
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
