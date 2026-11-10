@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>LimitPilot</title>
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0F1E33"/><stop offset="1" stop-color="#17375A"/></linearGradient></defs>
+  <rect x="100.0" y="100.0" width="824.0" height="824.0" rx="185.0" fill="url(#bg)"/>
+  <path d="M 322.5 737.5 A 268.0 268.0 0 1 1 779.2 569.0" fill="none" stroke="#2EC4B6" stroke-width="66.0" stroke-linecap="round"/>
+  <path d="M 779.2 569.0 A 268.0 268.0 0 0 1 701.5 737.5" fill="none" stroke="#FFB020" stroke-width="66.0" stroke-linecap="round"/>
+  <line x1="512.0" y1="548.0" x2="723.4" y2="514.5" stroke="#F5F7FA" stroke-width="40.0" stroke-linecap="round"/>
+  <polyline points="708.7,554.1 748.4,510.6 697.2,481.4" fill="none" stroke="#F5F7FA" stroke-width="30.0" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="512.0" cy="548.0" r="50.0" fill="#F5F7FA"/>
+</svg>

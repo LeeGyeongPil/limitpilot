@@ -1,0 +1,54 @@
+{
+  "_comment": "Practice-mode scenario. All accounts, e-mails and tokens are fake. Percentages are per 15-minute tick; resets are hours/minutes after the scenario starts.",
+  "tickMinutes": 15,
+  "ticks": 4,
+  "threshold": 90,
+  "accounts": [
+    {
+      "slot": 1,
+      "alias": "work",
+      "email": "work@example.com",
+      "org": "Example Org",
+      "accountUuid": "demo-account-1",
+      "orgUuid": "demo-org-1",
+      "access": "demo-access-1",
+      "refresh": "demo-refresh-1",
+      "tokenValidHours": 8,
+      "sessionResetMinutes": 190,
+      "weeklyResetHours": 118,
+      "session": [62, 91, 91, 91],
+      "weekly": [40, 41, 41, 41]
+    },
+    {
+      "slot": 2,
+      "alias": "personal",
+      "email": "personal@example.com",
+      "org": "Example Org",
+      "accountUuid": "demo-account-2",
+      "orgUuid": "demo-org-2",
+      "access": "demo-access-2",
+      "refresh": "demo-refresh-2",
+      "tokenValidHours": 0.1,
+      "sessionResetMinutes": 120,
+      "weeklyResetHours": 20,
+      "session": [10, 10, 17, 26],
+      "weekly": [30, 30, 31, 32]
+    },
+    {
+      "slot": 3,
+      "alias": "side",
+      "email": "side@example.com",
+      "org": "Example Org",
+      "accountUuid": "demo-account-3",
+      "orgUuid": "demo-org-3",
+      "access": "demo-access-3",
+      "refresh": "demo-refresh-3",
+      "tokenValidHours": -1,
+      "refreshFails": "invalid_grant",
+      "sessionResetMinutes": 60,
+      "weeklyResetHours": 30,
+      "session": [5, 5, 5, 5],
+      "weekly": [12, 12, 12, 12]
+    }
+  ]
+}

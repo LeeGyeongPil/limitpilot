@@ -1,0 +1,2026 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LimitPilot</title>
+<script>/* 첫 페인트 전 테마 적용 — 새로고침 깜빡임 방지 */
+try{const t=localStorage.getItem("limitpilot-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;}catch(e){}</script>
+<style>
+  /* 검증된 레퍼런스 팔레트 — 역할 토큰 (dataviz 규칙) */
+  :root {
+    --page:           #f9f9f7;
+    --surface-1:      #fcfcfb;
+    --surface-2:      #f3f2ef;
+    --surface-3:      #ecebe6;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #6e6c67;
+    --hairline:       rgba(11,11,11,0.08);
+    --hairline-2:     rgba(11,11,11,0.14);
+    --grid:           #e1e0d9;
+    --accent:         #2a78d6;
+    --accent-2:       #4a3aa7;
+    --status-warning: #fab219;
+    --status-serious: #ec835a;
+    --status-critical:#d03b3b;
+    --status-good:    #0ca30c;
+    --shadow-1: 0 1px 2px rgba(11,11,11,.03), 0 8px 26px rgba(11,11,11,.06);
+    --toast-bg: #1a1a19;
+    --toast-fg: #fcfcfb;
+  }
+  :root { color-scheme: light; }
+  /* 다크 토큰 — ① 시스템 다크(수동 라이트 선택 시 제외) ② 수동 다크 선택.
+     두 셀렉터에 같은 블록을 반복(속성 셀렉터는 미디어쿼리와 OR 불가). */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page:           #0d0d0d;
+      --surface-1:      #161615;
+      --surface-2:      #1f1f1e;
+      --surface-3:      #2a2a28;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --hairline:       rgba(255,255,255,0.08);
+      --hairline-2:     rgba(255,255,255,0.16);
+      --grid:           #2c2c2a;
+      --accent:         #3987e5;
+      --accent-2:       #9085e9;
+      --shadow-1: none;
+      --toast-bg: #fcfcfb;
+      --toast-fg: #1a1a19;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page:           #0d0d0d;
+    --surface-1:      #161615;
+    --surface-2:      #1f1f1e;
+    --surface-3:      #2a2a28;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --hairline:       rgba(255,255,255,0.08);
+    --hairline-2:     rgba(255,255,255,0.16);
+    --grid:           #2c2c2a;
+    --accent:         #3987e5;
+    --accent-2:       #9085e9;
+    --shadow-1: none;
+    --toast-bg: #fcfcfb;
+    --toast-fg: #1a1a19;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    background: var(--page);
+    color: var(--text-primary);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 22px 22px 52px;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  button { font: inherit; }
+
+  /* ── 헤더 ────────────────────────────────────────────── */
+  .topbar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+  .logo { width: 29px; height: 29px; border-radius: 9px; flex: none;
+          display: grid; place-items: center; color: #fff;
+          background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+  .logo svg { width: 15px; height: 15px; }
+  .demo-badge { font-size: 10.5px; font-weight: 700; letter-spacing: 0.4px; padding: 2px 7px;
+                border-radius: 999px; margin-left: 6px; vertical-align: middle;
+                color: #0f1e33; background: #ffb020; }
+  .onboarding ol { margin: 8px 0 0 0; padding-left: 4px; list-style: none; display: grid; gap: 6px; }
+  .onboarding li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .onboarding li.done { opacity: 0.6; }
+  .onboarding code { font-size: 11.5px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .topbar h1 { font-size: 15px; font-weight: 700; letter-spacing: -0.2px; white-space: nowrap; }
+  .topbar .grow { flex: 1; }
+  .thr-box { display: flex; align-items: center; gap: 9px; }
+  .thr-box .lbl { font-size: 11.5px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+  .thr-box b { font-size: 12.5px; color: var(--accent); font-variant-numeric: tabular-nums;
+               min-width: 34px; text-align: right; }
+  input[type=range] { -webkit-appearance: none; appearance: none; height: 5px; width: 130px;
+    border-radius: 3px; outline: none; cursor: pointer;
+    background: linear-gradient(to right, var(--accent) var(--fill, 80%), var(--grid) var(--fill, 80%)); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none;
+    width: 15px; height: 15px; border-radius: 50%; background: var(--surface-1);
+    border: 4.5px solid var(--accent); }
+  .theme-btn { width: 30px; height: 30px; border-radius: 9px;
+               border: 1px solid var(--hairline-2); background: var(--surface-1);
+               color: var(--text-secondary); cursor: pointer;
+               display: grid; place-items: center; transition: all .14s ease; }
+  .theme-btn svg { width: 15px; height: 15px; }
+  .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .live { display: inline-flex; align-items: center; gap: 6px;
+          font-size: 11.5px; color: var(--text-muted); white-space: nowrap; }
+  .live .pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--status-good); }
+
+  #banner { display: none; background: color-mix(in srgb, var(--status-critical) 9%, var(--surface-1));
+            border: 1px solid color-mix(in srgb, var(--status-critical) 30%, transparent);
+            border-radius: 12px; padding: 11px 15px; margin-bottom: 14px; font-size: 13px; }
+
+  .notice { background: var(--surface-1); border: 1px solid var(--hairline);
+            border-radius: 14px; padding: 14px 18px; margin-bottom: 14px;
+            font-size: 12.5px; color: var(--text-secondary); box-shadow: var(--shadow-1); }
+
+  /* ── 히어로(활성 계정) — 상단 대형 링 게이지 ─────────── */
+  .hero { position: relative; background: var(--surface-1);
+          border: 1px solid color-mix(in srgb, var(--accent) 42%, transparent);
+          box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 42%, transparent), var(--shadow-1);
+          border-radius: 20px; padding: 22px 24px 20px; margin-bottom: 16px;
+          background-image: linear-gradient(180deg,
+            color-mix(in srgb, var(--accent) 4.5%, var(--surface-1)), var(--surface-1) 130px); }
+  .hero-head { display: flex; align-items: center; gap: 12px; }
+  .hero-avatar { width: 40px; height: 40px; border-radius: 12px; flex: none;
+                 display: grid; place-items: center; font-weight: 700; font-size: 17px;
+                 background: color-mix(in srgb, var(--accent) 12%, var(--surface-1));
+                 color: var(--accent);
+                 border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent); }
+  .hero-who { flex: 1; min-width: 0; }
+  .hero-name { font-size: 16.5px; font-weight: 700; letter-spacing: -0.2px;
+               overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hero-meta { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
+  .hero-edit { position: absolute; top: 16px; right: 16px; }
+  .hero-body { display: flex; gap: 26px; margin-top: 18px; flex-wrap: wrap; align-items: center; }
+  .hero .badges { margin-top: 12px; }
+  .rings { display: flex; gap: 26px; flex: none; }
+  .ring-unit { display: flex; align-items: center; gap: 13px; }
+  .ring-wrap { position: relative; width: 104px; height: 104px; flex: none; }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-wrap .ring-track { fill: none; stroke-width: 9; }
+  .ring-wrap .ring-fill { fill: none; stroke-width: 9; stroke-linecap: round;
+               transition: stroke-dashoffset .7s cubic-bezier(.2,.8,.2,1); }
+  .ring-center { position: absolute; inset: 0; display: grid; place-items: center; }
+  .ring-pct { font-size: 24px; font-weight: 750; letter-spacing: -0.7px; }
+  .ring-pct .u { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+  .ring-info { min-width: 96px; }
+  .ring-title { font-size: 12.5px; font-weight: 650; color: var(--text-secondary); }
+  .ring-status { font-size: 11.5px; font-weight: 650; margin-top: 3px; }
+  .ring-status .ic { margin-right: 3px; font-size: 9.5px; }
+  .ring-reset { font-size: 11px; color: var(--text-muted); margin-top: 4px;
+                line-height: 1.45; max-width: 150px; font-variant-numeric: tabular-nums; }
+  .hero-models { flex: 1; min-width: 220px; }
+  .hero-models h3 { font-size: 10.5px; font-weight: 700; letter-spacing: .6px;
+                    color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px; }
+  .hero-models .m-block { margin-top: 9px; min-width: 0; }
+  .hero .note { font-size: 12px; color: var(--text-muted); margin-top: 14px; line-height: 1.6; }
+
+  /* ── 통합 계정 리스트 — 활성/비활성 동일 기하 ────────── */
+  .list { background: var(--surface-1); border: 1px solid var(--hairline);
+          border-radius: 18px; box-shadow: var(--shadow-1); overflow: hidden; }
+  /* 동작 칼럼은 고정폭(헤더·행 정렬 일치). 영어 "Switch" 버튼까지 넘침 없이 담기게
+     넉넉히 잡는다 — 한국어("전환")는 더 좁지만 같은 폭을 공유해 정렬을 맞춘다. */
+  .list-head, .row { display: grid; align-items: center; gap: 14px;
+                     grid-template-columns: minmax(160px, 1.2fr) 1fr 1fr 222px; }
+  .list-head { padding: 11px 18px 9px;
+               font-size: 10.5px; font-weight: 700; letter-spacing: .6px;
+               color: var(--text-muted); text-transform: uppercase;
+               border-bottom: 1px solid var(--hairline); }
+  .list-head :last-child { text-align: right; }
+  .row { position: relative; padding: 14px 18px;
+         border-bottom: 1px solid var(--hairline); }
+  .row:last-child { border-bottom: none; }
+  .row.off { opacity: .55; }
+  .row.off:hover { opacity: .9; }
+  .row.active { background: linear-gradient(90deg,
+      color-mix(in srgb, var(--accent) 6%, var(--surface-1)),
+      color-mix(in srgb, var(--accent) 2%, var(--surface-1))); }
+  .row.active::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0;
+                        width: 3px; background: var(--accent); }
+
+  .row-id { display: flex; align-items: center; gap: 11px; min-width: 0; }
+  /* 미니 링 아바타 — 모노그램 둘레 원호 = 세션 사용률(심각도 색) */
+  .ringav { position: relative; width: 38px; height: 38px; flex: none; }
+  .ringav svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .ringav .ring-track { fill: none; stroke-width: 3; }
+  .ringav .ring-fill { fill: none; stroke-width: 3; stroke-linecap: round;
+                       transition: stroke-dashoffset .7s cubic-bezier(.2,.8,.2,1); }
+  .ringav .letter { position: absolute; inset: 5px; border-radius: 50%;
+                    display: grid; place-items: center;
+                    font-weight: 700; font-size: 13px;
+                    background: var(--surface-2); color: var(--text-secondary); }
+  .row.active .ringav .letter {
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface-1));
+    color: var(--accent); }
+  .row-who { min-width: 0; }
+  .row-name { font-size: 13.5px; font-weight: 650; overflow: hidden;
+              text-overflow: ellipsis; white-space: nowrap; }
+  .row-meta { font-size: 10.5px; color: var(--text-muted); margin-top: 1px;
+              overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .chip { display: inline-flex; align-items: center; font-size: 9.5px; font-weight: 800;
+          letter-spacing: .4px; border-radius: 999px; padding: 2px 8px;
+          vertical-align: 2px; margin-left: 7px; white-space: nowrap;
+          color: var(--accent);
+          background: color-mix(in srgb, var(--accent) 11%, var(--surface-1));
+          border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+  .row-badge { font-size: 9.5px; font-weight: 700; padding: 1.5px 6px; border-radius: 5px;
+               white-space: nowrap; vertical-align: 1px; margin-left: 6px;
+               color: var(--status-critical);
+               border: 1px solid color-mix(in srgb, var(--status-critical) 30%, transparent);
+               background: color-mix(in srgb, var(--status-critical) 8%, var(--surface-1)); }
+  .row-badge.quiet { color: var(--text-muted); border-color: var(--hairline);
+                     background: var(--surface-2); }
+  /* 엔터프라이즈 칩·배지 — 구독 계정과 시각적으로 구분(보라 계열) */
+  .chip.ent { color: var(--accent-2);
+              background: color-mix(in srgb, var(--accent-2) 12%, var(--surface-1));
+              border-color: color-mix(in srgb, var(--accent-2) 30%, transparent); }
+  .row-badge.ent { color: var(--accent-2);
+                   border-color: color-mix(in srgb, var(--accent-2) 30%, transparent);
+                   background: color-mix(in srgb, var(--accent-2) 8%, var(--surface-1)); }
+
+  /* 사용량 셀 — 모든 행 동일 구조 */
+  .cell { min-width: 0; }
+  .cell-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .cell-pct { font-size: 13.5px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .cell-status { font-size: 10px; font-weight: 650; color: var(--text-secondary);
+                 white-space: nowrap; }
+  .cell-status .ic { margin-right: 2px; font-size: 8.5px; }
+  .s-ok .ic       { color: var(--accent); }
+  .s-warning .ic  { color: var(--status-warning); }
+  .s-serious .ic  { color: var(--status-serious); }
+  .s-critical .ic { color: var(--status-critical); }
+  .cell-reset { font-size: 10px; color: var(--text-muted); margin-top: 3px;
+                overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+                font-variant-numeric: tabular-nums; }
+  .meter { position: relative; height: 5px; border-radius: 3px; margin-top: 5px; overflow: hidden; }
+  .meter .fill { position: absolute; inset: 0 auto 0 0; border-radius: 0 3px 3px 0;
+                 min-width: 3px; transition: width .6s cubic-bezier(.2,.8,.2,1); }
+  .m-ok            { background: color-mix(in srgb, var(--accent) 14%, var(--surface-1)); }
+  .m-ok .fill      { background: var(--accent); }
+  .m-warning       { background: color-mix(in srgb, var(--status-warning) 16%, var(--surface-1)); }
+  .m-warning .fill { background: var(--status-warning); }
+  .m-serious       { background: color-mix(in srgb, var(--status-serious) 16%, var(--surface-1)); }
+  .m-serious .fill { background: var(--status-serious); }
+  .m-critical      { background: color-mix(in srgb, var(--status-critical) 15%, var(--surface-1)); }
+  .m-critical .fill{ background: var(--status-critical); }
+  .cell-note { font-size: 11px; color: var(--text-muted); }
+  /* 엔터프라이즈 달러 소진 셀 — 세션/주간 두 칸을 병합해 사용 금액/한도를 보인다 */
+  .cell.cell-spend { grid-column: 2 / 4; }
+  .cell-lim { font-weight: 500; color: var(--text-muted); font-size: 11px; }
+
+  /* 액션 — 모든 행 동일 폭(158px 고정 컬럼), 오른쪽 정렬 */
+  .row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 5px; }
+  .iconbtn { width: 30px; height: 30px; border-radius: 8px; border: none;
+             background: transparent; color: var(--text-muted); cursor: pointer;
+             display: grid; place-items: center; transition: all .14s ease; }
+  .iconbtn svg { width: 14.5px; height: 14.5px; }
+  .iconbtn:hover:not(:disabled) { background: var(--surface-2); color: var(--text-primary); }
+  .iconbtn.go:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 11%, transparent);
+                                     color: var(--accent); }
+  .iconbtn.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--status-critical) 10%, transparent);
+                                         color: var(--status-critical); }
+  .iconbtn:disabled { opacity: .32; cursor: not-allowed; }
+  .switchbtn { height: 29px; border-radius: 8px; border: 1px solid var(--hairline-2);
+               background: transparent; color: var(--text-secondary); cursor: pointer;
+               display: inline-flex; align-items: center; gap: 5px; padding: 0 10px;
+               font-size: 11.5px; font-weight: 650; white-space: nowrap;
+               transition: all .14s ease; }
+  .switchbtn svg { width: 12.5px; height: 12.5px; }
+  .switchbtn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 8%, transparent); }
+  .switchbtn.ghost { visibility: hidden; }   /* 활성 행 — 자리 유지로 정렬 일치 */
+  .toggle { position: relative; width: 34px; height: 20px; border-radius: 999px;
+            background: var(--surface-3); border: 1px solid var(--hairline);
+            cursor: pointer; padding: 0; flex: none; transition: background .18s ease; }
+  .toggle::after { content: ""; position: absolute; top: 1.5px; left: 1.5px;
+                   width: 15px; height: 15px; border-radius: 50%; background: #fff;
+                   box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .18s ease; }
+  .toggle.on { background: var(--accent); border-color: transparent; }
+  .toggle.on::after { transform: translateX(14px); }
+  .toggle:disabled { cursor: not-allowed; opacity: .4; }
+
+  /* 모델별 주간 — 활성 행 하단 스트립 (동일 컬럼 폭 안에서 확장) */
+  .models-strip { grid-column: 1 / -1; display: flex; gap: 22px; flex-wrap: wrap;
+                  margin-top: 4px; padding-top: 11px;
+                  border-top: 1px dashed var(--hairline); }
+  .m-block { flex: 1; min-width: 170px; }
+  .m-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .m-label { font-size: 11px; color: var(--text-secondary); overflow: hidden;
+             text-overflow: ellipsis; white-space: nowrap; }
+  .m-val { display: flex; align-items: baseline; gap: 6px; flex: none; }
+  .m-pct { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .m-status { font-size: 9.5px; font-weight: 650; color: var(--text-secondary); }
+  .m-status .ic { margin-right: 2px; font-size: 8px; }
+
+  .badges { grid-column: 1 / -1; display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px;
+           padding: 3px 9px; border-radius: 8px;
+           border: 1px solid var(--hairline); color: var(--text-secondary);
+           background: var(--surface-2); white-space: nowrap; }
+  .badge.alert { color: var(--status-critical);
+                 border-color: color-mix(in srgb, var(--status-critical) 30%, transparent);
+                 background: color-mix(in srgb, var(--status-critical) 8%, var(--surface-1)); }
+
+  .alias-edit { display: flex; align-items: center; gap: 5px; min-width: 0; flex-wrap: wrap; }
+  .alias-edit input { flex: 1; width: 100%; min-width: 76px; height: 31px;
+                      border: 1.5px solid var(--accent); border-radius: 8px;
+                      background: var(--surface-1); color: var(--text-primary);
+                      padding: 0 9px; font: inherit; font-size: 13px; font-weight: 600;
+                      outline: none; }
+  .alias-edit button { width: 28px; height: 28px; border: none; border-radius: 7px;
+                       background: transparent; color: var(--text-secondary);
+                       cursor: pointer; font-size: 15px; flex: none; }
+  .alias-edit button:hover { background: var(--surface-2); color: var(--accent); }
+
+  /* ── 상단 설정 토글(유지 호출·우선순위) · 새로고침 ─────── */
+  .pill { height: 30px; border-radius: 9px; border: 1px solid var(--hairline-2);
+          background: var(--surface-1); color: var(--text-secondary); cursor: pointer;
+          display: inline-flex; align-items: center; gap: 6px; padding: 0 10px;
+          font: inherit; font-size: 11.5px; font-weight: 650; white-space: nowrap;
+          transition: all .14s ease; }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--grid); flex: none; }
+  .pill.on .dot { background: var(--accent); }
+  .pill:hover { border-color: var(--accent); color: var(--accent); }
+  .spinning svg { animation: spin .8s linear infinite; }
+  .hero-refresh { position: absolute; top: 16px; right: 50px; }
+  .hero-head { padding-right: 70px; }
+  /* 주간 상한 표시 — 미터 위 세로 눈금(상한 위치) */
+  .meter .cap { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px;
+                background: var(--status-critical); opacity: .75; }
+  .meter .thr { position: absolute; top: 0; bottom: 0; width: 0; margin-left: -1px;
+                border-left: 2px dotted var(--text-primary); opacity: .45; }
+  /* 상단 설정 줄 — 전역 세션·주간 임계, 유지 호출, 우선순위 */
+  .setbar { display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap;
+            margin: -6px 0 16px; padding: 10px 14px; border-radius: 14px;
+            background: var(--surface-1); border: 1px solid var(--hairline); box-shadow: var(--shadow-1); }
+  .setbar .grow { flex: 1; }
+  .thr-follow { height: 22px; padding: 0 7px; border-radius: 7px; border: 1px solid var(--hairline-2);
+                background: transparent; color: var(--text-muted); font: inherit; font-size: 10.5px;
+                cursor: pointer; white-space: nowrap; }
+  .thr-follow:hover { border-color: var(--accent); color: var(--accent); }
+  .thr-box .sub { font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
+  /* 계정별 임계 칩 — 항상 보임, 클릭해 편집 */
+  .limits-chip { display: inline-flex; align-items: center; gap: 4px; margin-top: 5px;
+                 height: 22px; padding: 0 8px; border-radius: 7px; cursor: pointer;
+                 border: 1px solid var(--hairline-2); background: var(--surface-2);
+                 color: var(--text-muted); font: inherit; font-size: 10.5px; white-space: nowrap;
+                 max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .limits-chip b { font-weight: 650; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .limits-chip b.ov { color: var(--accent); }
+  .limits-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .burn-tag { display: inline-flex; align-items: center; gap: 4px; margin: 4px 0 0 0;
+              height: 20px; padding: 0 7px; border-radius: 6px; font-size: 10.5px; font-weight: 650;
+              color: var(--accent); white-space: nowrap;
+              background: color-mix(in srgb, var(--accent) 10%, var(--surface-1));
+              border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+  .setbar input[type=range] { width: 110px; }
+  .limits-edit { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap;
+                 padding: 10px 12px; border-radius: 10px; margin-top: 2px;
+                 background: color-mix(in srgb, var(--accent) 6%, var(--surface-1));
+                 border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+  .hero .limits-edit { margin-top: 12px; }
+  .limits-edit label { display: flex; align-items: center; gap: 5px; font-size: 11.5px;
+                       color: var(--text-secondary); white-space: nowrap; }
+  .limits-edit input { width: 58px; height: 28px; border-radius: 7px; padding: 0 6px; text-align: right;
+                       border: 1.5px solid var(--hairline-2); background: var(--surface-1);
+                       color: var(--text-primary); font: inherit; font-size: 12.5px;
+                       font-variant-numeric: tabular-nums; outline: none; }
+  .limits-edit input:focus { border-color: var(--accent); }
+  .limits-edit .hint { font-size: 10.5px; color: var(--text-muted); flex-basis: 100%; }
+  .limits-edit .acts { display: flex; gap: 6px; margin-left: auto; }
+  .limits-edit .acts button { height: 28px; padding: 0 10px; border-radius: 7px; font: inherit;
+                              font-size: 11.5px; font-weight: 650; cursor: pointer;
+                              border: 1px solid var(--hairline-2); background: var(--surface-1);
+                              color: var(--text-secondary); }
+  .limits-edit .acts button.primary { background: var(--accent); border-color: transparent; color: #fff; }
+
+  /* ── 계정 추가 ───────────────────────────────────────── */
+  .add-row { display: flex; align-items: center; justify-content: center; gap: 8px;
+             width: 100%; margin-top: 14px; padding: 13px;
+             border: 1.5px dashed var(--hairline-2); border-radius: 14px;
+             background: transparent; color: var(--text-muted);
+             font-size: 13px; font-weight: 600; cursor: pointer; transition: all .14s ease; }
+  .add-row:hover { color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+    background: color-mix(in srgb, var(--accent) 4%, transparent); }
+  .add-panel { margin-top: 14px; padding: 24px; border: 1.5px dashed var(--hairline-2);
+               border-radius: 16px; display: flex; flex-direction: column;
+               align-items: center; gap: 12px; text-align: center; position: relative; }
+  .add-panel h2 { font-size: 15.5px; font-weight: 700; }
+  .add-email { border: 1px solid var(--hairline-2); background: var(--surface-1);
+               border-radius: 10px; padding: 9px 12px; font: inherit; font-size: 13px;
+               width: 250px; color: var(--text-primary); text-align: center; outline: none;
+               transition: border-color .14s ease; }
+  .add-email:focus { border-color: var(--accent); }
+  .add-note { font-size: 11.5px; color: var(--text-muted); max-width: 300px; line-height: 1.55; }
+  .add-code-row { display: flex; width: 290px; gap: 8px; }
+  .add-code-row .add-email { width: 100%; min-width: 0; text-align: left; }
+  .add-tabs { display: flex; gap: 6px; padding: 3px; border-radius: 10px;
+              background: var(--surface-2); }
+  .add-tab { border: 0; border-radius: 8px; padding: 7px 11px; background: transparent;
+             color: var(--text-muted); font: inherit; font-size: 12px; font-weight: 650;
+             cursor: pointer; }
+  .add-tab.active { color: var(--text-primary); background: var(--surface-1);
+                    box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+  .gateway-form { width: min(100%, 430px); display: grid; grid-template-columns: 1fr 1fr;
+                  gap: 9px; text-align: left; }
+  .gateway-form .wide { grid-column: 1 / -1; }
+  .gateway-form label { display: grid; gap: 5px; color: var(--text-muted);
+                        font-size: 11px; font-weight: 650; }
+  .gateway-form input, .gateway-form select { width: 100%; min-width: 0; border: 1px solid var(--hairline-2);
+                  background: var(--surface-1); color: var(--text-primary); border-radius: 9px;
+                  padding: 9px 10px; font: inherit; font-size: 12.5px; outline: none; }
+  .gateway-form input:focus, .gateway-form select:focus { border-color: var(--accent); }
+  .gateway-view-toggle { display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px;
+                         background: var(--surface-2); align-self: flex-start; }
+  .gateway-view-toggle button { border: 0; border-radius: 6px; padding: 5px 9px;
+                                color: var(--text-muted); background: transparent;
+                                font: inherit; font-size: 11px; font-weight: 650; cursor: pointer; }
+  .gateway-view-toggle button.active { color: var(--text-primary); background: var(--surface-1);
+                                       box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+  .btn-primary { border: none; background: var(--accent); color: #fff;
+                 font-size: 13px; font-weight: 650; padding: 9px 17px; border-radius: 10px;
+                 cursor: pointer; transition: filter .14s ease; }
+  .btn-primary:hover { filter: brightness(1.07); }
+  .btn-primary:disabled { opacity: .55; cursor: default; }
+  .add-cancel { position: absolute; top: 10px; right: 10px; }
+  .spin { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid var(--grid);
+          border-top-color: var(--accent); animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  a.reopen { font-size: 12px; color: var(--accent); }
+
+  footer { margin-top: 22px; color: var(--text-muted); font-size: 11.5px; text-align: center; }
+
+  #toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(84px);
+           background: var(--toast-bg); color: var(--toast-fg); font-size: 13px; font-weight: 550;
+           padding: 11px 20px; border-radius: 999px; opacity: 0; pointer-events: none;
+           box-shadow: 0 8px 30px rgba(0,0,0,.25); z-index: 10;
+           transition: transform .28s cubic-bezier(.2,.9,.3,1.2), opacity .22s ease; max-width: 82vw; }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  /* ── 확인 모달 — 계정 삭제 등 파괴적 동작(브라우저 confirm 대체) ── */
+  .modal-overlay { position: fixed; inset: 0; z-index: 20; padding: 20px;
+                   display: grid; place-items: center;
+                   background: color-mix(in srgb, #000 42%, transparent);
+                   opacity: 0; transition: opacity .16s ease; }
+  .modal-overlay.show { opacity: 1; }
+  .modal { width: 100%; max-width: 380px; background: var(--surface-1);
+           border: 1px solid var(--hairline-2); border-radius: 16px;
+           box-shadow: 0 12px 48px rgba(0,0,0,.32); padding: 22px 22px 18px;
+           transform: translateY(8px) scale(.98);
+           transition: transform .18s cubic-bezier(.2,.8,.2,1); }
+  .modal-overlay.show .modal { transform: none; }
+  .modal h2 { font-size: 15.5px; font-weight: 700; letter-spacing: -.2px; margin-bottom: 8px; }
+  .modal p { font-size: 13px; color: var(--text-secondary); line-height: 1.55; white-space: pre-line; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+  .modal-btn { border-radius: 9px; padding: 8px 15px; font-size: 13px; font-weight: 650;
+               cursor: pointer; border: 1px solid var(--hairline-2);
+               background: var(--surface-1); color: var(--text-secondary);
+               transition: all .14s ease; }
+  .modal-btn:hover { background: var(--surface-2); color: var(--text-primary); }
+  .modal-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .modal-btn.danger { border: none; background: var(--status-critical); color: #fff; }
+  .modal-btn.danger:hover { filter: brightness(1.07); }
+
+  /* ── 애니메이션 — 최초 로드 1회(boot), 모션 축소 설정 존중 ── */
+  @media (prefers-reduced-motion: no-preference) {
+    .live .pulse { animation: pulse 2.4s ease-out infinite; }
+    @keyframes pulse {
+      0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--status-good) 45%, transparent); }
+      70%  { box-shadow: 0 0 0 6px transparent; }
+      100% { box-shadow: 0 0 0 0 transparent; }
+    }
+    @keyframes rise { from { opacity: 0; transform: translateY(12px); } }
+    .boot .notice, .boot .hero { animation: rise .5s cubic-bezier(.2,.8,.2,1) both; }
+    .boot .chip { animation: rise .4s .3s cubic-bezier(.2,.8,.2,1) both; }
+    .boot .list { animation: rise .55s .1s cubic-bezier(.2,.8,.2,1) both; }
+    .boot .add-row, .boot .add-panel { animation: rise .55s .22s cubic-bezier(.2,.8,.2,1) both; }
+    .boot .row { animation: rise .45s cubic-bezier(.2,.8,.2,1) both; }
+    .boot .row:nth-of-type(2) { animation-delay: .1s; }
+    .boot .row:nth-of-type(3) { animation-delay: .16s; }
+    .boot .row:nth-of-type(4) { animation-delay: .22s; }
+    .boot .row:nth-of-type(n+5) { animation-delay: .28s; }
+    .switchbtn:active, .btn-primary:active, .iconbtn:active { transform: scale(.95); }
+    .row { transition: background .12s ease; }
+    input[type=range]::-webkit-slider-thumb { transition: transform .12s ease; }
+    input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); }
+  }
+
+  @media (max-width: 700px) {
+    body { padding: 16px 12px 44px; }
+    .topbar { gap: 9px; }
+    .thr-box input[type=range] { width: 90px; }
+    .hero { padding: 18px; }
+    .hero-body { gap: 16px; }
+    .rings { width: 100%; justify-content: space-between; gap: 10px; }
+    .ring-info { min-width: 80px; }
+    .list-head { display: none; }
+    .list-head, .row { grid-template-columns: 1fr; }
+    .cell.cell-spend { grid-column: 1; }
+    .row { gap: 10px; padding: 14px 15px; }
+    .row-actions { justify-content: flex-end; }
+    .switchbtn.ghost { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="logo" aria-hidden="true">
+      <!-- 계기 게이지 + 바늘(한도 앞에서 방향을 튼다) — assets/icon/limitpilot.svg 와 같은 모양 -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+        stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5.6 18.4A9 9 0 1 1 18.4 18.4"/><path d="M12 12l4.2-4.2"/>
+        <circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/></svg>
+    </div>
+    <div>
+      <h1>LimitPilot <span class="demo-badge" id="demoBadge" hidden>DEMO</span></h1>
+    </div>
+    <div class="grow"></div>
+    <button class="theme-btn" id="refreshAllBtn" onclick="refreshAll(this)"
+            aria-label="전체 사용량 새로고침" title="전체 사용량 새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+  stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 4v5h-5"/></svg></button>
+    <button class="theme-btn" id="themeBtn" onclick="cycleTheme()"
+            aria-label="테마 전환" title="테마: 시스템"></button>
+    <span class="live" id="updated"><span class="pulse"></span>연결 중…</span>
+  </div>
+  <div class="setbar">
+    <div class="thr-box">
+      <span class="lbl" id="thrLbl">세션 임계</span>
+      <input type="range" id="thr" min="50" max="99" step="1" value="90"
+             aria-label="세션 임계">
+      <b id="thrVal">90%</b>
+    </div>
+    <div class="thr-box">
+      <span class="lbl" id="wthrLbl">주간 임계</span>
+      <input type="range" id="wthr" min="50" max="99" step="1" value="90"
+             aria-label="주간 임계">
+      <b id="wthrVal">90%</b>
+      <button class="thr-follow" id="wthrFollow" onclick="followSessionThreshold()" hidden>세션과 같게</button>
+      <span class="sub" id="wthrSub"></span>
+    </div>
+    <div class="grow"></div>
+    <button class="pill" id="autoBtn" onclick="toggleAutoSwitch()" aria-pressed="false"><span class="dot"></span><span id="autoLbl">자동 전환</span></button>
+    <button class="pill" id="kaBtn" onclick="toggleKeepalive()" aria-pressed="false"><span class="dot"></span><span id="kaLbl">유지 호출</span></button>
+    <button class="pill" id="prioBtn" onclick="togglePriority()"><span class="dot"></span><span id="prioLbl">리셋 임박 우선</span></button>
+    <button class="pill" id="burnBtn" onclick="toggleFinalBurn()"><span class="dot"></span><span id="burnLbl">리셋 전 소진</span></button>
+  </div>
+  <div id="banner"></div>
+  <div id="board"></div>
+  <footer id="footer"></footer>
+</div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+
+// 실행별 API 토큰(서버가 페이지를 줄 때 심는다) — 모든 /api 요청에 붙인다.
+// 같은 PC 의 다른 프로그램은 이 값을 모르므로 API 를 호출할 수 없다.
+const API_TOKEN = "__DASHBOARD_TOKEN__";
+const IS_DEMO = "__DASHBOARD_DEMO__" === "1";
+const nativeFetch = window.fetch.bind(window);
+window.fetch = (url, opts = {}) => {
+  if (String(url).startsWith("/api/")) {
+    const headers = new Headers(opts.headers || {});
+    headers.set("X-LimitPilot-Token", API_TOKEN);
+    headers.set("X-LimitPilot", "1");
+    opts = { ...opts, headers };
+  }
+  return nativeFetch(url, opts);
+};
+
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g,
+  (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+// UI 언어 — /api/status의 language(settings.language)를 따라간다 (위젯 L()과 동일 규약).
+// 첫 응답 전/서버 다운 시에도 지난 언어로 그리도록 localStorage에 기억한다
+let LANG = localStorage.getItem("limitpilot-lang") === "en" ? "en" : "ko";
+const L = (ko, en) => (LANG === "en" ? en : ko);
+
+// 심각도: 아이콘 모양 + 라벨이 색과 함께 상태를 전달(색 단독 금지)
+function severity(pct) {
+  if (pct >= 100) return { cls: "critical", label: L("소진", "Exhausted"), icon: "■", color: "var(--status-critical)" };
+  if (pct >= 90)  return { cls: "serious",  label: L("임박", "Imminent"), icon: "▲", color: "var(--status-serious)" };
+  if (pct >= 70)  return { cls: "warning",  label: L("주의", "Caution"), icon: "◆", color: "var(--status-warning)" };
+  return            { cls: "ok",       label: L("여유", "OK"), icon: "●", color: "var(--accent)" };
+}
+
+let fmtTime, fmtClock;
+function buildFormatters() {
+  const loc = LANG === "en" ? "en-US" : "ko-KR";
+  fmtTime = new Intl.DateTimeFormat(loc,
+    { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+  fmtClock = new Intl.DateTimeFormat(loc,
+    { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+}
+buildFormatters();
+
+function countdown(iso) {
+  if (!iso) return "";
+  const t = new Date(iso).getTime();
+  if (isNaN(t)) return "";
+  const diff = t - Date.now();
+  if (diff <= 0) return L("리셋 도래 — 새 데이터 대기", "Reset due — awaiting fresh data");
+  const m = Math.floor(diff / 60000);
+  const h = Math.floor(m / 60);
+  const d = Math.floor(h / 24);
+  const when = fmtTime.format(new Date(t));
+  const left = d > 0 ? L(`${d}일 ${h % 24}시간`, `${d}d ${h % 24}h`)
+             : h > 0 ? L(`${h}시간 ${m % 60}분`, `${h}h ${m % 60}m`)
+             : L(`${Math.max(m, 1)}분`, `${Math.max(m, 1)}m`);
+  return L(`리셋까지 ${left} · ${when}`, `Resets in ${left} · ${when}`);
+}
+
+// 엔터프라이즈 달러 금액 포맷 — 통화 심볼($) 좁은 형식, 소수 2자리
+function fmtMoney(v, currency) {
+  const cur = currency || "USD";
+  try {
+    return new Intl.NumberFormat(LANG === "en" ? "en-US" : "ko-KR", {
+      style: "currency", currency: cur, currencyDisplay: "narrowSymbol",
+      minimumFractionDigits: 2, maximumFractionDigits: 2,
+    }).format(v);
+  } catch (e) {
+    return `${cur} ${Number(v).toFixed(2)}`;
+  }
+}
+
+function fmtTokens(value) {
+  return `${new Intl.NumberFormat(LANG === "en" ? "en-US" : "ko-KR").format(Number(value) || 0)} tokens`;
+}
+
+function fmtGatewayMoney(value) {
+  const amount = Number(value) || 0;
+  return `$${amount.toLocaleString(LANG === "en" ? "en-US" : "ko-KR", {
+    minimumFractionDigits: 2, maximumFractionDigits: amount < 0.01 ? 6 : 4,
+  })}`;
+}
+
+const SWAP = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+  stroke-linecap="round" stroke-linejoin="round"><path d="M17 3l4 4-4 4M21 7H8M7 21l-4-4 4-4M3 17h13"/></svg>`;
+const TRASH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+  stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2
+  m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14ZM10 11v6M14 11v6"/></svg>`;
+const PENCIL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+  stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>`;
+
+const REFRESH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+  stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 4v5h-5"/></svg>`;
+
+let lastStatus = null;
+let aliasEditSlot = null;
+let aliasDraft = "";
+let limitsEditSlot = null;
+let limitsDraft = { session: "", weekly: "", cap: "" };
+const limitsEditable = (s) => !s.gateway && !s.enterprise && s.kind !== "setup-token" && !!s.limits;
+const usageRefreshable = (s) => !s.gateway && s.kind !== "setup-token";
+const fmtP = (v) => `${Math.round(v)}`;
+
+// 서버(slot_decision_usage)와 같은 정규화 — 계정 임계→전역 세션 임계, 최대치→100.
+// 심각도 색을 계정별 임계·최대치 기준으로 칠하기 위해 쓴다(표시 숫자는 실측 그대로)
+function normalizePct(p, threshold, limit, base) {
+  const t = Math.min(threshold, limit);
+  if (p >= limit) return 100 + (p - limit);
+  if (p <= t) return t > 0 ? p * base / t : 100;
+  return base + (p - t) * (100 - base) / (limit - t);
+}
+function windowLimits(s, kind) {
+  const lim = s.limits;
+  if (!lim) return null;
+  return kind === "session" ? { thr: lim.session, max: 100 }
+       : kind === "weekly_all" ? { thr: lim.weekly, max: lim.cap } : null;
+}
+// 눈금은 사용자가 정한 원래 값(리셋 직전 소진 중에도 기준선을 보여준다)
+function markLimits(s, kind) {
+  const lim = s.limits;
+  if (!lim) return null;
+  return kind === "session" ? { thr: lim.sessionBase ?? lim.session, max: 100 }
+       : kind === "weekly_all" ? { thr: lim.weeklyBase ?? lim.weekly, max: lim.capBase ?? lim.cap } : null;
+}
+function windowSeverity(s, w) {
+  const wl = windowLimits(s, w.kind);
+  const base = lastStatus?.threshold ?? 90;
+  return severity(wl ? Math.round(normalizePct(w.pct, wl.thr, wl.max, base)) : Math.round(w.pct));
+}
+function meterMarks(s, kind) {
+  const wl = markLimits(s, kind);
+  if (!wl) return "";
+  const thr = wl.thr < wl.max ? `<div class="thr" style="left:${wl.thr}%"></div>` : "";
+  const cap = wl.max < 100 ? `<div class="cap" style="left:${wl.max}%"></div>` : "";
+  return thr + cap;
+}
+
+// ── 계정별 임계 칩·편집기 ─────────────────────────────────
+function limitsChip(s) {
+  if (!limitsEditable(s) || limitsEditSlot === s.slot) return "";
+  const lim = s.limits;
+  const v = (val, ov) => `<b class="${ov ? "ov" : ""}">${fmtP(val)}</b>`;
+  const tip = L("계정별 임계·최대치 — 클릭해 편집 (파란 값 = 이 계정만 지정, 회색 = 전역값)",
+                "Per-account thresholds — click to edit (blue = set for this account, grey = global)");
+  const burn = lim.finalBurn
+    ? `<br><span class="burn-tag" title="${esc(L(`주간 리셋 직전 — 임계·최대치를 무시하고 100%까지 남은 한도를 최우선으로 사용 중`,
+        `Weekly reset is near — ignoring thresholds and cap, using the rest up to 100% first`))}">⏳ ${L("주간 리셋 전 소진 중", "Using up before weekly reset")}</span>`
+    : lim.sessionBurn
+    ? `<br><span class="burn-tag" title="${esc(L(`세션 리셋 직전 — 세션 임계를 무시하고 세션 100%까지 최우선으로 사용 중(주간 한도는 지킴)`,
+        `Session reset is near — ignoring the session threshold, using the session up to 100% first (weekly limits still apply)`))}">⏳ ${L("세션 리셋 전 소진 중", "Using up before session reset")}</span>`
+    : "";
+  return `<button class="limits-chip" title="${esc(tip)}" onclick="beginLimitsEdit(${s.slot})">
+    ${L("임계", "Thresholds")} ${L("세션", "session")} ${v(lim.sessionBase ?? lim.session, lim.sessionOverride)}
+    · ${L("주간", "weekly")} ${v(lim.finalBurn ? lim.weeklyBase : lim.weekly, lim.weeklyOverride)}
+    · ${L("최대", "cap")} ${v(lim.capBase ?? lim.cap, (lim.capBase ?? lim.cap) < 100)}</button>${burn}`;
+}
+function limitsEditor(s) {
+  if (limitsEditSlot !== s.slot) return "";
+  const g = lastStatus || {};
+  const input = (key, ph, min, label, tip) => `<label title="${esc(tip)}">${label}
+      <input id="lim-${key}-${s.slot}" type="number" min="${min}" max="${key === "cap" ? 100 : 99}" step="1"
+        value="${esc(limitsDraft[key])}" placeholder="${esc(ph)}"
+        oninput="limitsDraft.${key}=this.value" onkeydown="limitsKey(event, ${s.slot})">%</label>`;
+  return `<div class="limits-edit">
+    ${input("session", fmtP(g.threshold ?? 90), 50, L("세션 임계", "Session threshold"),
+            L("세션(5시간) 사용률이 이 값에 닿으면 다른 계정으로 미리 전환", "Switch ahead when the 5-hour session reaches this"))}
+    ${input("weekly", fmtP(g.weeklyThreshold ?? g.threshold ?? 90), 50, L("주간 임계", "Weekly threshold"),
+            L("주간(7일) 사용률이 이 값에 닿으면 다른 계정으로 미리 전환", "Switch ahead when the 7-day usage reaches this"))}
+    ${input("cap", "100", 10, L("주간 최대", "Weekly cap"),
+            L("주간 사용률이 이 값에 닿으면 즉시 전환하고 이 계정은 더 쓰지 않음", "Switch immediately and stop using this account at this weekly %"))}
+    <div class="acts">
+      <button onclick="resetLimits(${s.slot})">${L("전역값으로", "Use global")}</button>
+      <button onclick="cancelLimitsEdit()">${L("취소", "Cancel")}</button>
+      <button class="primary" onclick="saveLimits(${s.slot})">${L("저장", "Save")}</button>
+    </div>
+    <div class="hint">${L("비워두면 전역값(상단 설정)을 씁니다. 임계는 50~99, 최대는 10~100(100 = 제한 없음).",
+      "Leave blank to use the global value (top bar). Thresholds 50–99, cap 10–100 (100 = no cap).")}</div>
+  </div>`;
+}
+function beginLimitsEdit(slot) {
+  const t = regSlots().find((x) => x.slot === slot);
+  if (!t || !limitsEditable(t)) return;
+  limitsEditSlot = slot;
+  limitsDraft = {
+    session: t.limits.sessionOverride ? fmtP(t.limits.sessionBase ?? t.limits.session) : "",
+    weekly: t.limits.weeklyOverride ? fmtP(t.limits.weeklyOverrideValue ?? t.limits.weeklyBase ?? t.limits.weekly) : "",
+    cap: (t.limits.capBase ?? t.limits.cap) < 100 ? fmtP(t.limits.capBase ?? t.limits.cap) : "",
+  };
+  renderBoard();
+  requestAnimationFrame(() => $(`lim-session-${slot}`)?.focus());
+}
+function cancelLimitsEdit() { limitsEditSlot = null; renderBoard(); }
+function limitsKey(event, slot) {
+  if (event.key === "Enter") { event.preventDefault(); saveLimits(slot); }
+  if (event.key === "Escape") { event.preventDefault(); cancelLimitsEdit(); }
+}
+async function postLimits(slot, body) {
+  try {
+    const r = await fetch(`/api/slot/${slot}/limits`, {
+      method: "POST",
+      headers: { "X-LimitPilot": "1", "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    limitsEditSlot = null;
+    toast(d.message || L("저장됨", "Saved"));
+  } catch (e) {
+    toast(L(`저장 실패: ${e.message}`, `Save failed: ${e.message}`));
+  }
+  refresh();
+}
+function saveLimits(slot) {
+  const parse = (v, min, max) => {
+    if (String(v).trim() === "") return null;
+    const n = Number(v);
+    return Number.isInteger(n) && n >= min && n <= max ? n : NaN;
+  };
+  const next = { sessionThreshold: parse(limitsDraft.session, 50, 99),
+                 weeklyThreshold: parse(limitsDraft.weekly, 50, 99),
+                 weeklyCap: parse(limitsDraft.cap, 10, 100) };
+  if (Object.values(next).some((v) => Number.isNaN(v))) {
+    toast(L("임계는 50~99, 최대는 10~100 사이 정수로 입력하세요", "Use integers: thresholds 50–99, cap 10–100"));
+    return;
+  }
+  // 바뀐 값만 보낸다 — 그대로인 항목까지 저장·로그하지 않게
+  const t = regSlots().find((x) => x.slot === slot);
+  const cur = t?.limits;
+  const body = {};
+  if (!cur || next.sessionThreshold !== (cur.sessionOverride ? Math.round(cur.sessionBase ?? cur.session) : null)) body.sessionThreshold = next.sessionThreshold;
+  if (!cur || next.weeklyThreshold !== (cur.weeklyOverride ? Math.round(cur.weeklyOverrideValue ?? cur.weeklyBase ?? cur.weekly) : null)) body.weeklyThreshold = next.weeklyThreshold;
+  if (!cur || (next.weeklyCap ?? 100) !== Math.round(cur.capBase ?? cur.cap)) body.weeklyCap = next.weeklyCap;
+  if (!Object.keys(body).length) { cancelLimitsEdit(); return; }
+  postLimits(slot, body);
+}
+const resetLimits = (slot) => postLimits(slot, { sessionThreshold: null, weeklyThreshold: null, weeklyCap: null });
+let addOpen = false;
+let addMode = "browser";
+let gatewayEditSlot = null;
+let gatewayDraft = { alias: "", baseUrl: "", modelId: "", token: "", authMode: "bearer",
+  inputTokenLimit: "0", outputTokenLimit: "0", inputPricePerMillion: "0",
+  outputPricePerMillion: "0", costLimit: "0" };
+const gatewayViewModes = {};
+
+const regSlots = () => (lastStatus?.slots || []).filter((s) => s.registered);
+const winOf = (s, kind) => (s.windows || []).find((w) => w.kind === kind);
+
+// ── 미니 링 아바타: 모노그램 둘레 원호 = 세션 사용률(심각도 색) ──
+function ringAvatar(s, label) {
+  // 엔터프라이즈는 세션 창이 없어 달러 소진율로, 그 외엔 세션 사용률로 원호를 그린다
+  const w5 = s.kind === "setup-token" ? null : winOf(s, "session");
+  const pctVal = s.enterprise ? (s.spend ? s.spend.pct : null) : (w5 ? w5.pct : null);
+  const has = pctVal !== null && pctVal !== undefined;
+  const pct = has ? Math.min(pctVal, 100) : 0;
+  const sev = severity(has ? Math.round(pctVal) : 0);
+  const R = 17.5, C = 2 * Math.PI * R;
+  const track = has ? `color-mix(in srgb, ${sev.color} 18%, var(--surface-1))` : "var(--grid)";
+  const initial = (label || "?")[0].toUpperCase();
+  return `<div class="ringav" aria-hidden="true">
+    <svg width="38" height="38" viewBox="0 0 38 38">
+      <circle class="ring-track" cx="19" cy="19" r="${R}" stroke="${track}"/>
+      ${has ? `<circle class="ring-fill" cx="19" cy="19" r="${R}" stroke="${sev.color}"
+        stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct / 100)}"/>` : ""}
+    </svg>
+    <div class="letter">${esc(initial)}</div>
+  </div>`;
+}
+
+// ── 히어로 대형 링 게이지 ───────────────────────────────
+function bigRing(w, s) {
+  const shown = Math.round(w.pct);
+  // 심각도는 계정별 임계·최대치 기준(정규화) — 표시 숫자는 실측 그대로
+  const sev = windowSeverity(s, w);
+  const R = 44, C = 2 * Math.PI * R;
+  const frac = Math.min(w.pct, 100) / 100;
+  const track = `color-mix(in srgb, ${sev.color} 15%, var(--surface-1))`;
+  const tip = `${w.pct.toFixed(1)}% · ${L("리셋", "resets")} ${w.resetsAt ? fmtTime.format(new Date(w.resetsAt)) : "?"}`;
+  return `<div class="ring-unit" title="${esc(tip)}">
+    <div class="ring-wrap">
+      <svg width="104" height="104" viewBox="0 0 104 104" role="img"
+           aria-label="${esc(w.label)} ${shown}%">
+        <circle class="ring-track" cx="52" cy="52" r="${R}" stroke="${track}"/>
+        <circle class="ring-fill" cx="52" cy="52" r="${R}" stroke="${sev.color}"
+          stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/>
+      </svg>
+      <div class="ring-center"><div class="ring-pct">${shown}<span class="u">%</span></div></div>
+    </div>
+    <div class="ring-info">
+      <div class="ring-title">${esc(w.label)}</div>
+      <div class="ring-status s-${sev.cls}"><span class="ic">${sev.icon}</span>${sev.label}</div>
+      <div class="ring-reset" data-reset="${esc(w.resetsAt || "")}">${countdown(w.resetsAt)}</div>
+    </div>
+  </div>`;
+}
+
+// ── 엔터프라이즈 히어로 게이지: 링 = 달러 소진율, 중앙 = 사용 금액 ──
+function spendBigGauge(spend) {
+  const shown = Math.round(spend.pct);
+  const sev = severity(shown);
+  const R = 44, C = 2 * Math.PI * R;
+  const frac = Math.min(spend.pct, 100) / 100;
+  const track = `color-mix(in srgb, ${sev.color} 15%, var(--surface-1))`;
+  const used = fmtMoney(spend.used, spend.currency);
+  const limit = fmtMoney(spend.limit, spend.currency);
+  return `<div class="ring-unit" title="${esc(`${used} / ${limit} · ${spend.pct.toFixed(2)}%`)}">
+    <div class="ring-wrap">
+      <svg width="104" height="104" viewBox="0 0 104 104" role="img"
+           aria-label="${L("사용 금액", "Spend")} ${esc(used)} / ${esc(limit)}">
+        <circle class="ring-track" cx="52" cy="52" r="${R}" stroke="${track}"/>
+        <circle class="ring-fill" cx="52" cy="52" r="${R}" stroke="${sev.color}"
+          stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/>
+      </svg>
+      <div class="ring-center"><div class="ring-pct" style="font-size:17px;letter-spacing:-.4px">${esc(used)}</div></div>
+    </div>
+    <div class="ring-info">
+      <div class="ring-title">${L("이번 달 사용 금액", "Spend this month")}</div>
+      <div class="ring-status s-${sev.cls}"><span class="ic">${sev.icon}</span>${spend.pct.toFixed(1)}%</div>
+      <div class="ring-reset">${L("월 한도", "Monthly limit")} ${esc(limit)}</div>
+    </div>
+  </div>`;
+}
+
+function gatewayViewMode(s) {
+  return s.gatewayUsage?.cost?.enabled && gatewayViewModes[s.slot] === "cost" ? "cost" : "tokens";
+}
+
+function gatewayModeToggle(s) {
+  if (!s.gatewayUsage?.cost?.enabled) return "";
+  const mode = gatewayViewMode(s);
+  return `<div class="gateway-view-toggle" role="group" aria-label="${L("사용량 표시 방식", "Usage display mode")}">
+    <button class="${mode === "tokens" ? "active" : ""}" onclick="setGatewayView(${s.slot}, 'tokens')">${L("토큰", "Tokens")}</button>
+    <button class="${mode === "cost" ? "active" : ""}" onclick="setGatewayView(${s.slot}, 'cost')">${L("금액", "Cost")}</button>
+  </div>`;
+}
+
+function setGatewayView(slot, mode) {
+  gatewayViewModes[slot] = mode;
+  renderBoard();
+}
+
+function gatewayTokenBigGauge(metric, label) {
+  const limited = Number(metric?.limit) > 0;
+  const pctVal = limited ? Number(metric.pct || 0) : null;
+  const shown = limited ? Math.round(pctVal) : null;
+  const sev = severity(shown || 0);
+  const R = 44, C = 2 * Math.PI * R;
+  const frac = limited ? Math.min(pctVal, 100) / 100 : 0;
+  const used = fmtTokens(metric?.used || 0);
+  const limit = limited ? fmtTokens(metric.limit) : L("무제한", "Unlimited");
+  const track = limited ? `color-mix(in srgb, ${sev.color} 15%, var(--surface-1))` : "var(--grid)";
+  return `<div class="ring-unit" title="${esc(`${used} / ${limit}`)}">
+    <div class="ring-wrap">
+      <svg width="104" height="104" viewBox="0 0 104 104" role="img" aria-label="${esc(`${label} ${used} / ${limit}`)}">
+        <circle class="ring-track" cx="52" cy="52" r="${R}" stroke="${track}"/>
+        ${limited ? `<circle class="ring-fill" cx="52" cy="52" r="${R}" stroke="${sev.color}"
+          stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/>` : ""}
+      </svg>
+      <div class="ring-center"><div class="ring-pct">${limited ? shown + '<span class="u">%</span>' : "∞"}</div></div>
+    </div>
+    <div class="ring-info">
+      <div class="ring-title">${esc(label)}</div>
+      <div class="ring-status${limited ? ` s-${sev.cls}` : ""}">${esc(used)}</div>
+      <div class="ring-reset">${L("한도", "Limit")} ${esc(limit)}</div>
+    </div>
+  </div>`;
+}
+
+function gatewayCostBigGauge(cost) {
+  const limited = Number(cost?.limit) > 0;
+  const pctVal = limited ? Number(cost.pct || 0) : null;
+  const shown = limited ? Math.round(pctVal) : null;
+  const sev = severity(shown || 0);
+  const R = 44, C = 2 * Math.PI * R;
+  const frac = limited ? Math.min(pctVal, 100) / 100 : 0;
+  const used = fmtGatewayMoney(cost?.used || 0);
+  const limit = limited ? fmtGatewayMoney(cost.limit) : L("무제한", "Unlimited");
+  const track = limited ? `color-mix(in srgb, ${sev.color} 15%, var(--surface-1))` : "var(--grid)";
+  return `<div class="ring-unit" title="${esc(`${used} / ${limit}`)}">
+    <div class="ring-wrap">
+      <svg width="104" height="104" viewBox="0 0 104 104" role="img" aria-label="${esc(`${L("합산 금액", "Combined cost")} ${used} / ${limit}`)}">
+        <circle class="ring-track" cx="52" cy="52" r="${R}" stroke="${track}"/>
+        ${limited ? `<circle class="ring-fill" cx="52" cy="52" r="${R}" stroke="${sev.color}"
+          stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/>` : ""}
+      </svg>
+      <div class="ring-center"><div class="ring-pct" style="font-size:17px;letter-spacing:-.4px">${esc(used)}</div></div>
+    </div>
+    <div class="ring-info">
+      <div class="ring-title">${L("누적 합산 금액", "Cumulative combined cost")}</div>
+      <div class="ring-status${limited ? ` s-${sev.cls}` : ""}">${limited ? `${pctVal.toFixed(1)}%` : L("무제한", "Unlimited")}</div>
+      <div class="ring-reset">${L("금액 한도", "Cost limit")} ${esc(limit)}</div>
+    </div>
+  </div>`;
+}
+
+function gatewayTokenRowCell(metric, label, controls = "") {
+  const limited = Number(metric?.limit) > 0;
+  const pct = limited ? Number(metric.pct || 0) : 0;
+  const sev = severity(Math.round(pct));
+  const used = fmtTokens(metric?.used || 0);
+  const limit = limited ? fmtTokens(metric.limit) : L("무제한", "Unlimited");
+  return `<div class="cell" title="${esc(`${used} / ${limit}`)}">${controls}
+    <div class="cell-top"><span class="cell-pct">${esc(used)}</span>
+      <span class="cell-status${limited ? ` s-${sev.cls}` : ""}">${limited ? `${pct.toFixed(1)}%` : "∞"}</span></div>
+    <div class="meter${limited ? ` m-${sev.cls}` : ""}"><div class="fill" style="width:${limited ? Math.min(pct, 100) : 0}%"></div></div>
+    <div class="cell-reset">${esc(label)} · ${L("한도", "Limit")} ${esc(limit)}</div>
+  </div>`;
+}
+
+function gatewayCostRowCell(cost, controls = "") {
+  const limited = Number(cost?.limit) > 0;
+  const pct = limited ? Number(cost.pct || 0) : 0;
+  const sev = severity(Math.round(pct));
+  const used = fmtGatewayMoney(cost?.used || 0);
+  const limit = limited ? fmtGatewayMoney(cost.limit) : L("무제한", "Unlimited");
+  return `<div class="cell cell-spend" title="${esc(`${used} / ${limit}`)}">${controls}
+    <div class="cell-top"><span class="cell-pct">${esc(used)} <span class="cell-lim">/ ${esc(limit)}</span></span>
+      <span class="cell-status${limited ? ` s-${sev.cls}` : ""}">${limited ? `${pct.toFixed(1)}%` : "∞"}</span></div>
+    <div class="meter${limited ? ` m-${sev.cls}` : ""}"><div class="fill" style="width:${limited ? Math.min(pct, 100) : 0}%"></div></div>
+    <div class="cell-reset">${L("누적 입력·출력 합산 금액", "Cumulative input + output cost")}</div>
+  </div>`;
+}
+
+function hero(s) {
+  const label = s.label || s.email || L(`슬롯 ${s.slot}`, `Slot ${s.slot}`);
+  const limited = s.kind === "setup-token";
+  const meta = s.gateway ? (s.modelId || "—")
+    : [limited ? L("제한 토큰", "Limited token")
+               : (s.alias ? s.email : (s.orgName || L("개인 계정", "Personal account"))),
+       L(`슬롯 ${s.slot}`, `Slot ${s.slot}`)].filter(Boolean).join(" · ");
+  const initial = (label || "?")[0].toUpperCase();
+  const primary = (s.windows || []).filter((w) => w.kind === "session" || w.kind === "weekly_all");
+  const models  = (s.windows || []).filter((w) => w.kind !== "session" && w.kind !== "weekly_all");
+  const editing = aliasEditSlot === s.slot;
+  const entGauge = s.spend
+    ? spendBigGauge(s.spend)
+    : `<div class="note">${L("사용 금액 데이터 없음 — 데몬의 다음 조회 대기 중",
+        "No spend data — waiting for the daemon's next probe")}</div>`;
+  const gatewayMode = gatewayViewMode(s);
+  const gatewayMeters = s.gatewayUsage || {};
+  const gatewayBody = `<div class="hero-body">
+    ${gatewayModeToggle(s)}
+    <div class="rings">${gatewayMode === "cost"
+      ? gatewayCostBigGauge(gatewayMeters.cost || {})
+      : gatewayTokenBigGauge(gatewayMeters.input || {}, L("입력 토큰", "Input tokens"))
+        + gatewayTokenBigGauge(gatewayMeters.output || {}, L("출력 토큰", "Output tokens"))}</div>
+  </div>`;
+  const body = limited
+    ? `<div class="note">${L("사용량 조회·자동 전환 권한이 없는 제한 토큰입니다 — 삭제 후 브라우저 로그인으로 다시 추가하세요.",
+        "This limited token has no usage/auto-switch permissions — delete it, then re-add via browser login.")}</div>`
+    : s.gateway
+    ? gatewayBody
+    : s.enterprise
+    ? `<div class="hero-body"><div class="rings">${entGauge}</div></div>`
+    : `<div class="hero-body">
+        <div class="rings">${primary.map((w) => bigRing(w, s)).join("") ||
+          `<div class="note">${L("사용량 데이터 없음 — 데몬의 다음 조회 대기 중",
+            "No usage data — waiting for the daemon's next probe")}</div>`}</div>
+        ${models.length ? `<div class="hero-models"><h3>${L("모델별 주간", "Weekly by model")}</h3>${models.map(modelBlock).join("")}</div>` : ""}
+      </div>`;
+  const entChip = s.enterprise ? `<span class="chip ent">Enterprise</span>` : "";
+  const heroRefresh = editing || !usageRefreshable(s) ? ""
+    : `<button class="iconbtn go hero-refresh" title="${esc(refreshTip(s))}"
+        aria-label="${L("활성 계정 사용량 새로고침", "Refresh active account usage")}"
+        onclick="refreshSlot(${s.slot}, this)">${REFRESH}</button>`;
+  return `<section class="hero">
+    ${heroRefresh}
+    ${editing ? "" : `<button class="iconbtn hero-edit" title="${s.gateway ? L("게이트웨이 설정 편집", "Edit gateway settings") : L("별칭 편집", "Edit alias")}"
+      aria-label="${s.gateway ? L("활성 게이트웨이 설정 편집", "Edit active gateway settings") : L("활성 계정 별칭 편집", "Edit active account alias")}" onclick="${s.gateway ? `beginGatewayEdit(${s.slot})` : `beginAliasEdit(${s.slot})`}">${PENCIL}</button>`}
+    <div class="hero-head">
+      <div class="hero-avatar" aria-hidden="true">${esc(initial)}</div>
+      <div class="hero-who">
+        ${editing ? aliasEditor(s)
+          : `<div class="hero-name" title="${esc(label)}">${esc(label)}${entChip}<span class="chip">${L("사용 중", "Active")}</span></div>`}
+        <div class="hero-meta">${esc(meta)}</div>
+        ${limitsChip(s)}
+      </div>
+    </div>
+    ${limitsEditor(s)}
+    ${badges(s)}
+    ${body}
+  </section>`;
+}
+
+function usageCell(s, kind) {
+  if (s.kind === "setup-token") return `<div class="cell"><span class="cell-note">${L("제한 토큰", "Limited token")}</span></div>`;
+  const w = winOf(s, kind);
+  if (!w) return `<div class="cell"><span class="cell-note">—</span></div>`;
+  const shown = Math.round(w.pct);   // 표시는 실측, 심각도는 계정별 임계·최대치 기준
+  const sev = windowSeverity(s, w);
+  const wl = windowLimits(s, kind);
+  const tip = wl ? L(`${w.pct.toFixed(1)}% · 임계 ${fmtP(wl.thr)}%${wl.max < 100 ? ` · 최대 ${fmtP(wl.max)}%` : ""}`,
+                     `${w.pct.toFixed(1)}% · threshold ${fmtP(wl.thr)}%${wl.max < 100 ? ` · cap ${fmtP(wl.max)}%` : ""}`)
+                 : `${w.pct.toFixed(1)}%`;
+  return `<div class="cell" title="${esc(tip)}">
+    <div class="cell-top">
+      <span class="cell-pct">${shown}%</span>
+      <span class="cell-status s-${sev.cls}"><span class="ic">${sev.icon}</span>${sev.label}</span>
+    </div>
+    <div class="meter m-${sev.cls}"><div class="fill" style="width:${Math.min(w.pct, 100)}%"></div>${meterMarks(s, kind)}</div>
+    <div class="cell-reset" data-reset="${esc(w.resetsAt || "")}">${countdown(w.resetsAt)}</div>
+  </div>`;
+}
+
+function modelBlock(w) {
+  const shown = Math.round(w.pct);
+  const sev = severity(shown);
+  return `<div class="m-block" title="${esc(`${w.pct.toFixed(1)}%`)}">
+    <div class="m-top">
+      <span class="m-label">${esc(w.label)}</span>
+      <span class="m-val">
+        <span class="m-status s-${sev.cls}"><span class="ic">${sev.icon}</span>${sev.label}</span>
+        <span class="m-pct">${shown}%</span>
+      </span>
+    </div>
+    <div class="meter m-${sev.cls}"><div class="fill" style="width:${Math.min(w.pct, 100)}%"></div></div>
+  </div>`;
+}
+
+// 계정 행의 엔터프라이즈 셀 — 세션/주간 두 칸을 병합해 사용 금액/월 한도를 보인다
+function spendRowCell(spend) {
+  if (!spend) {
+    return `<div class="cell cell-spend"><span class="cell-note">${L("사용 금액 데이터 없음", "No spend data")}</span></div>`;
+  }
+  const shown = Math.round(spend.pct);
+  const sev = severity(shown);
+  const used = fmtMoney(spend.used, spend.currency);
+  const limit = fmtMoney(spend.limit, spend.currency);
+  return `<div class="cell cell-spend" title="${esc(`${used} / ${limit} · ${spend.pct.toFixed(2)}%`)}">
+    <div class="cell-top">
+      <span class="cell-pct">${esc(used)} <span class="cell-lim">/ ${esc(limit)}</span></span>
+      <span class="cell-status s-${sev.cls}"><span class="ic">${sev.icon}</span>${spend.pct.toFixed(1)}%</span>
+    </div>
+    <div class="meter m-${sev.cls}"><div class="fill" style="width:${Math.min(spend.pct, 100)}%"></div></div>
+    <div class="cell-reset">${L("이번 달 사용 · 월 한도 대비", "This month · vs monthly limit")}</div>
+  </div>`;
+}
+
+function badges(s) {
+  const b = [];
+  if (s.enterprise) b.push(`<span class="badge">${L("엔터프라이즈 · 자동 전환 제외(수동 전용)", "Enterprise · excluded from auto-switch (manual only)")}</span>`);
+  if (s.error === "limited-token") b.push(`<span class="badge alert">${L("제한 토큰 — 삭제 후 다시 추가", "Limited token — delete, then re-add")}</span>`);
+  if (s.quarantine) b.push(`<span class="badge alert">${L("■ 격리 — 이 계정으로 재로그인하면 복구됩니다", "■ Quarantined — recovers after re-login with this account")}</span>`);
+  if (s.tokenExpired) b.push(`<span class="badge">${L("토큰 만료 — 사용 시 자동 갱신", "Token expired — auto-renews on use")}</span>`);
+  if (s.error === "keychain") b.push(`<span class="badge alert">${L("키체인 접근 실패", "Keychain access failed")}</span>`);
+  else if (s.error === "no-credential") b.push(`<span class="badge alert">${L("자격증명 없음", "No credentials")}</span>`);
+  else if (s.error === "unmanaged") b.push(`<span class="badge alert">${L("현재 Claude 로그인이 등록 슬롯과 다름", "Current Claude login differs from registered slots")}</span>`);
+  else if (s.error === "switching") b.push(`<span class="badge">${L("전환 반영 중", "Switch in progress")}</span>`);
+  else if (s.error === "http-429" || s.error === "limited-token") { /* 스냅샷 조용 표시 */ }
+  else if (s.error) b.push(`<span class="badge">${L("조회 실패", "Fetch failed")}(${esc(s.error)})</span>`);
+  // 활성 토큰 만료·다른 로그인은 정상 상태(곧 풀림) — 실패 배지로 띄우지 않는다
+  if (s.keepalive && !s.keepalive.ok && !s.quarantine
+      && !["token-expired", "unmanaged"].includes(s.keepalive.err)) {
+    b.push(`<span class="badge" title="${esc(s.keepalive.detail || "")}">${L("유지 호출 실패", "Keep-alive failed")}(${esc(s.keepalive.err || "?")})</span>`);
+  }
+  const ageMin = s.fetchedAt ? Math.floor((Date.now() / 1000 - s.fetchedAt) / 60) : null;
+  if (ageMin !== null && ageMin >= 5) {
+    const age = ageMin >= 1440 ? L(`${Math.floor(ageMin / 1440)}일`, `${Math.floor(ageMin / 1440)}d`)
+              : ageMin >= 60 ? L(`${Math.floor(ageMin / 60)}시간 ${ageMin % 60}분`, `${Math.floor(ageMin / 60)}h ${ageMin % 60}m`)
+              : L(`${ageMin}분`, `${ageMin}m`);
+    b.push(`<span class="badge">${L(`${age} 전 데이터`, `Data ${age} old`)}</span>`);
+  }
+  return b.length ? `<div class="badges">${b.join("")}</div>` : "";
+}
+
+function aliasEditor(s) {
+  return `<div class="alias-edit">
+    <input id="aliasInput-${s.slot}" maxlength="80" value="${esc(aliasDraft)}"
+      placeholder="${L("별칭 없음", "No alias")}" aria-label="${L(`슬롯 ${s.slot} 별칭`, `Slot ${s.slot} alias`)}"
+      oninput="aliasDraft=this.value" onkeydown="aliasKey(event, ${s.slot})">
+    <button title="${L("별칭 저장", "Save alias")}" aria-label="${L("별칭 저장", "Save alias")}" onclick="saveAlias(${s.slot})">✓</button>
+    <button title="${L("편집 취소", "Cancel edit")}" aria-label="${L("편집 취소", "Cancel edit")}" onclick="cancelAliasEdit()">×</button>
+  </div>`;
+}
+
+// ── 계정 행 — 활성/비활성 동일 기하, 활성은 강조 + 모델 스트립 ──
+function row(s) {
+  const enabled = s.enabled !== false;
+  const limited = s.kind === "setup-token";
+  const label = s.label || s.email || L(`슬롯 ${s.slot}`, `Slot ${s.slot}`);
+  const meta = s.gateway ? (s.modelId || "—")
+    : [limited ? L("제한 토큰", "Limited token")
+               : (s.alias ? s.email : (s.orgName || L("개인 계정", "Personal account"))),
+       L(`슬롯 ${s.slot}`, `Slot ${s.slot}`)].filter(Boolean).join(" · ");
+  const marks = [
+    s.active ? `<span class="chip">${L("사용 중", "Active")}</span>` : "",
+    s.enterprise && !s.active ? `<span class="row-badge ent">Enterprise</span>` : "",
+    limited && !s.active ? `<span class="row-badge">${L("제한", "Limited")}</span>` : "",
+    s.quarantine ? `<span class="row-badge">${L("■ 격리", "■ Quarantined")}</span>` : "",
+    // 엔터프라이즈는 enabled(자동전환 포함)가 무의미하므로 '꺼짐' 배지를 숨긴다
+    !enabled && !s.active && !s.enterprise && !s.gateway ? `<span class="row-badge quiet">${L("꺼짐", "Off")}</span>` : "",
+  ].join("");
+  const editing = aliasEditSlot === s.slot;
+  // 엔터프라이즈는 enabled와 무관하게 수동 전환 대상(정책상 수동 전용)
+  const switchable = !s.active && !limited && !s.quarantine && (enabled || s.enterprise || s.gateway);
+  const toggleTip = limited ? L("제한 토큰은 삭제 후 다시 추가하세요", "Limited token — delete, then re-add")
+                  : s.active ? L("활성 계정은 끌 수 없습니다 — 먼저 다른 계정으로 전환하세요",
+                                 "The active account cannot be turned off — switch to another account first")
+                  : (enabled ? L("끄기 — 자동전환 후보에서 제외", "Turn off — exclude from auto-switch")
+                             : L("켜기 — 자동전환 후보에 포함", "Turn on — include in auto-switch"));
+  const delTip = s.active ? L("활성 계정은 삭제할 수 없습니다", "The active account cannot be deleted")
+                          : L("계정 삭제", "Delete account");
+  // 엔터프라이즈는 자동전환 대상이 아니라 on/off 자체가 무의미 — 토글을 렌더하지 않고
+  // (열 정렬 유지를 위해) 보이지 않는 자리만 둔다. 나머지 계정은 정상 토글.
+  const toggleBtn = s.enterprise || s.gateway
+    ? `<span class="toggle" style="visibility:hidden" aria-hidden="true"></span>`
+    : `<button class="toggle${enabled ? " on" : ""}" title="${esc(toggleTip)}"
+        ${s.active || limited ? "disabled" : ""}
+        onclick="mutate(${s.slot}, ${enabled ? "'disable'" : "'enable'"})"></button>`;
+  // 전환 버튼 자리는 모든 행에 유지(ghost) — 컬럼 정렬 일치
+  const actions = editing ? "" : `<div class="row-actions">
+      <button class="switchbtn${switchable ? "" : " ghost"}"
+        title="${esc(L(`${label} 계정으로 즉시 전환`, `Switch to ${label} now`))}"
+        ${switchable ? `onclick="activateSlot(${s.slot}, this)"` : "tabindex=-1 aria-hidden=true"}
+        >${SWAP}${L("전환", "Switch")}</button>
+      ${usageRefreshable(s)
+        ? `<button class="iconbtn go" title="${esc(refreshTip(s))}"
+            aria-label="${L(`슬롯 ${s.slot} 사용량 새로고침`, `Refresh slot ${s.slot} usage`)}"
+            onclick="refreshSlot(${s.slot}, this)">${REFRESH}</button>`
+        : `<span class="iconbtn" style="visibility:hidden" aria-hidden="true"></span>`}
+      <button class="iconbtn go" title="${s.gateway ? L("게이트웨이 설정 편집", "Edit gateway settings") : L("별칭 편집", "Edit alias")}" aria-label="${s.gateway ? L(`슬롯 ${s.slot} 게이트웨이 설정 편집`, `Edit slot ${s.slot} gateway settings`) : L(`슬롯 ${s.slot} 별칭 편집`, `Edit slot ${s.slot} alias`)}"
+        onclick="${s.gateway ? `beginGatewayEdit(${s.slot})` : `beginAliasEdit(${s.slot})`}">${PENCIL}</button>
+      ${toggleBtn}
+      <button class="iconbtn danger" title="${esc(delTip)}" ${s.active ? "disabled" : ""}
+        onclick="removeSlot(${s.slot})">${TRASH}</button>
+    </div>`;
+  const models = s.active && !limited
+    ? (s.windows || []).filter((w) => w.kind !== "session" && w.kind !== "weekly_all")
+    : [];
+  const gatewayMode = gatewayViewMode(s);
+  const usageCells = s.gateway
+    ? gatewayMode === "cost"
+      ? gatewayCostRowCell(s.gatewayUsage?.cost || {}, gatewayModeToggle(s))
+      : gatewayTokenRowCell(s.gatewayUsage?.input || {}, L("입력", "Input"), gatewayModeToggle(s))
+        + gatewayTokenRowCell(s.gatewayUsage?.output || {}, L("출력", "Output"))
+    : s.enterprise
+    ? spendRowCell(s.spend)
+    : usageCell(s, "session") + usageCell(s, "weekly_all");
+  // 엔터프라이즈는 enabled가 무의미하므로 OFF 흐리게(dim) 처리하지 않는다
+  return `<div class="row${s.active ? " active" : ""}${enabled || s.active || s.enterprise || s.gateway ? "" : " off"}">
+    <div class="row-id">
+      ${ringAvatar(s, label)}
+      <div class="row-who">
+        ${editing ? aliasEditor(s)
+          : `<div class="row-name" title="${esc(label)}">${esc(label)}${marks}</div>`}
+        <div class="row-meta">${esc(meta)}</div>
+        ${limitsChip(s)}
+      </div>
+    </div>
+    ${usageCells}
+    ${actions}
+    ${limitsEditor(s)}
+    ${badges(s)}
+    ${models.length ? `<div class="models-strip">${models.map(modelBlock).join("")}</div>` : ""}
+  </div>`;
+}
+
+// ── 계정 추가 (하단 행 → 인라인 패널) ───────────────────
+function addPanel() {
+  if (!addOpen) {
+    return `<button class="add-row" onclick="openAdd()">${L("＋ 계정 또는 서드파티 게이트웨이 추가", "＋ Add account or third-party gateway")}</button>`;
+  }
+  if (addActive) {
+    return `<div class="add-panel">
+      <button class="iconbtn add-cancel" title="${L("계정 추가 취소", "Cancel account add")}" aria-label="${L("계정 추가 취소", "Cancel account add")}"
+        onclick="addCancel()">×</button>
+      <div class="spin"></div>
+      <h2>${esc(addMessage)}</h2>
+      <div class="add-note">${L("Claude 로그인과 권한 승인을 완료하세요. 자동으로 완료되지 않으면 브라우저에 표시된 전체 코드를 붙여넣으세요.",
+        "Complete the Claude login and approval. If it does not finish automatically, paste the full code shown in the browser.")}</div>
+      ${addUrl ? `<a class="reopen" href="${esc(addUrl)}" target="_blank" rel="noopener">${L("로그인 페이지 다시 열기", "Reopen login page")}</a>` : ""}
+      <div class="add-code-row">
+        <input class="add-email" id="addCode" type="text" autocomplete="off" spellcheck="false"
+          value="${esc(addCodeDraft)}" placeholder="${L("인증 코드 (code#state)", "Auth code (code#state)")}"
+          oninput="addCodeDraft=this.value" onkeydown="if(event.key==='Enter') addFeed()">
+        <button class="btn-primary" id="addCodeBtn" onclick="addFeed()">${L("전달", "Submit")}</button>
+      </div>
+    </div>`;
+  }
+  const tabs = `<div class="add-tabs">
+    <button class="add-tab${addMode === "browser" ? " active" : ""}" onclick="setAddMode('browser')">${L("Claude 로그인", "Claude login")}</button>
+    <button class="add-tab${addMode === "gateway" ? " active" : ""}" onclick="setAddMode('gateway')">${L("서드파티 게이트웨이", "Third-party gateway")}</button>
+  </div>`;
+  if (addMode === "gateway") {
+    const editingGateway = gatewayEditSlot !== null;
+    return `<div class="add-panel">
+      <button class="iconbtn add-cancel" title="${L("닫기", "Close")}" aria-label="${L("계정 추가 닫기", "Close account add")}" onclick="closeAdd()">×</button>
+      <h2>${editingGateway ? L("서드파티 게이트웨이 수정", "Edit third-party gateway") : L("서드파티 게이트웨이 추가", "Add third-party gateway")}</h2>
+      ${tabs}
+      <div class="gateway-form">
+        <input class="wide" id="gwAlias" maxlength="80" value="${esc(gatewayDraft.alias)}" placeholder="${L("예: 팀 게이트웨이", "e.g. Team gateway")}" oninput="gatewayDraft.alias=this.value">
+        <input class="wide" id="gwBase" type="url" value="${esc(gatewayDraft.baseUrl)}" placeholder="${L("예: https://gateway.example.invalid", "e.g. https://gateway.example.invalid")}" oninput="gatewayDraft.baseUrl=this.value">
+        <input class="wide" id="gwModel" value="${esc(gatewayDraft.modelId)}" placeholder="${L("예: example-model-id", "e.g. example-model-id")}" oninput="gatewayDraft.modelId=this.value">
+        <label>${L("입력 토큰 한도 (0 = 무제한)", "Input token limit (0 = unlimited)")}
+          <input id="gwInputLimit" type="number" min="0" step="1" value="${esc(gatewayDraft.inputTokenLimit)}" oninput="gatewayDraft.inputTokenLimit=this.value">
+        </label>
+        <label>${L("출력 토큰 한도 (0 = 무제한)", "Output token limit (0 = unlimited)")}
+          <input id="gwOutputLimit" type="number" min="0" step="1" value="${esc(gatewayDraft.outputTokenLimit)}" oninput="gatewayDraft.outputTokenLimit=this.value">
+        </label>
+        <label>${L("입력 $ / 1M tokens", "Input $ / 1M tokens")}
+          <input id="gwInputPrice" type="number" min="0" step="0.000001" value="${esc(gatewayDraft.inputPricePerMillion)}" oninput="gatewayDraft.inputPricePerMillion=this.value">
+        </label>
+        <label>${L("출력 $ / 1M tokens", "Output $ / 1M tokens")}
+          <input id="gwOutputPrice" type="number" min="0" step="0.000001" value="${esc(gatewayDraft.outputPricePerMillion)}" oninput="gatewayDraft.outputPricePerMillion=this.value">
+        </label>
+        <label class="wide">${L("합산 금액 한도 USD (0 = 무제한)", "Combined cost limit USD (0 = unlimited)")}
+          <input id="gwCostLimit" type="number" min="0" step="0.01" value="${esc(gatewayDraft.costLimit)}" oninput="gatewayDraft.costLimit=this.value">
+        </label>
+        <select id="gwAuth" onchange="gatewayDraft.authMode=this.value">
+          <option value="bearer"${gatewayDraft.authMode === "bearer" ? " selected" : ""}>Bearer / Authorization</option>
+          <option value="api-key"${gatewayDraft.authMode === "api-key" ? " selected" : ""}>API key / x-api-key</option>
+        </select>
+        <input id="gwToken" type="password" autocomplete="new-password" value="${esc(gatewayDraft.token)}" placeholder="${editingGateway ? L("비워두면 기존 토큰 유지", "Leave blank to keep saved token") : L("토큰", "Token")}" oninput="gatewayDraft.token=this.value" onkeydown="if(event.key==='Enter') gatewayAdd()">
+      </div>
+      <button class="btn-primary" id="gwAddBtn" onclick="gatewayAdd()">${editingGateway ? L("연결 테스트 후 수정", "Test connection and update") : L("연결 테스트 후 저장", "Test connection and save")}</button>
+      <div class="add-note">${L("0 한도는 무제한입니다. 단가를 입력하면 토큰/금액 표시 토글이 생깁니다. 캐시 토큰은 입력 비용에 포함됩니다.", "A zero limit is unlimited. Enter a price to enable the tokens/cost toggle. Cache tokens count toward input cost.")}</div>
+    </div>`;
+  }
+  return `<div class="add-panel">
+    <button class="iconbtn add-cancel" title="${L("닫기", "Close")}" aria-label="${L("계정 추가 닫기", "Close account add")}"
+      onclick="closeAdd()">×</button>
+    <h2>${L("계정 추가", "Add account")}</h2>
+    ${tabs}
+    <input class="add-email" id="addAlias" type="text" placeholder="${L("별칭 (선택 — 예: 업무, 개인)", "Alias (optional — e.g. work, personal)")}">
+    <button class="btn-primary" id="addBtn" onclick="addStart()">${L("브라우저로 로그인해 추가", "Add via browser login")}</button>
+    <div class="add-note" id="addNote">${L("Claude 계정으로 로그인·승인하면 계정 정보와 자동 전환 자격증명이 함께 등록됩니다. 현재 활성 계정은 바뀌지 않습니다.",
+      "Logging in and approving registers the account plus its auto-switch credentials. The currently active account does not change.")}</div>
+  </div>`;
+}
+
+function openAdd() {
+  addOpen = true; addMode = "browser"; gatewayEditSlot = null;
+  gatewayDraft = { alias: "", baseUrl: "", modelId: "", token: "", authMode: "bearer",
+    inputTokenLimit: "0", outputTokenLimit: "0", inputPricePerMillion: "0",
+    outputPricePerMillion: "0", costLimit: "0" };
+  renderBoard(); requestAnimationFrame(() => $("addAlias")?.focus());
+}
+function setAddMode(mode) { if (!addActive) { addMode = mode; if (mode !== "gateway") gatewayEditSlot = null; renderBoard(); requestAnimationFrame(() => $(mode === "gateway" ? "gwAlias" : "addAlias")?.focus()); } }
+function closeAdd() { addOpen = false; gatewayEditSlot = null; gatewayDraft.token = ""; renderBoard(); }
+
+function beginGatewayEdit(slot) {
+  const target = regSlots().find((s) => s.slot === slot && s.gateway);
+  if (!target) return;
+  gatewayEditSlot = slot;
+  gatewayDraft = {
+    alias: target.alias || "", baseUrl: target.baseUrl || "", modelId: target.modelId || "",
+    token: "", authMode: target.authMode || "bearer",
+    inputTokenLimit: String(target.gatewayUsage?.config?.inputTokenLimit || 0),
+    outputTokenLimit: String(target.gatewayUsage?.config?.outputTokenLimit || 0),
+    inputPricePerMillion: String(target.gatewayUsage?.config?.inputPricePerMillion || 0),
+    outputPricePerMillion: String(target.gatewayUsage?.config?.outputPricePerMillion || 0),
+    costLimit: String(target.gatewayUsage?.config?.costLimit || 0),
+  };
+  addOpen = true;
+  addMode = "gateway";
+  renderBoard();
+  requestAnimationFrame(() => $("gwAlias")?.focus());
+}
+
+// ── 처음 쓰는 사람용 3단계 체크리스트 — 모두 끝나면 사라진다 ──
+function onboarding(slots) {
+  const d = lastStatus || {};
+  const steps = [
+    { done: slots.length >= 1,
+      text: L("지금 Claude Code 에 로그인된 계정 등록", "Register the account Claude Code is signed in with"),
+      action: `<button class="switchbtn" onclick="addCurrentLogin(this)">${L("현재 로그인 계정 등록", "Register current login")}</button>` },
+    { done: slots.length >= 2,
+      text: L("다른 계정을 브라우저 로그인으로 추가(활성 계정은 그대로)", "Add another account through a browser login (active account unchanged)"),
+      action: `<button class="switchbtn" onclick="openAddPanel()">${L("브라우저로 추가", "Add in browser")}</button>` },
+    { done: !!d.daemonInstalled,
+      text: L("감시 켜기: 터미널에서 <code>limitpilot install-daemon</code> (자동 전환까지 원하면 <code>--enable-auto</code>). macOS 키체인 확인창이 뜨면 '항상 허용'을 누르세요.",
+              "Turn on watching: run <code>limitpilot install-daemon</code> (add <code>--enable-auto</code> to switch automatically). If macOS asks for Keychain access, choose “Always Allow”."),
+      action: "" },
+  ];
+  if (steps.every((s) => s.done)) return "";
+  return `<section class="notice onboarding" aria-label="${L("시작하기", "Getting started")}">
+    <b>${L("시작하기", "Getting started")}</b>
+    <ol>${steps.map((s) => `<li class="${s.done ? "done" : ""}">
+      <span aria-hidden="true">${s.done ? "✓" : "○"}</span> ${s.text}
+      ${s.done ? `<span class="sr-only">${L("완료", "done")}</span>` : s.action}</li>`).join("")}</ol>
+  </section>`;
+}
+
+function openAddPanel() { openAdd(); }
+
+async function addCurrentLogin(btn) {
+  if (btn) btn.disabled = true;
+  try {
+    const r = await fetch("/api/add/current", { method: "POST" });
+    const j = await r.json().catch(() => ({}));
+    toast(j.message || j.error || (r.ok ? "OK" : "HTTP " + r.status), !r.ok);
+    refresh();
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// ── 보드 렌더 — 활성 계정은 상단 히어로, 나머지는 정렬 행 ──
+function renderBoard() {
+  const slots = regSlots();
+  const active = slots.find((s) => s.active);
+  const others = slots.filter((s) => !s.active).sort((a, b) => a.slot - b.slot);
+  const top = onboarding(slots) + (active ? hero(active)
+    : slots.length
+      ? `<div class="notice">${L("현재 Claude 로그인이 등록된 계정과 다릅니다 — 아래 계정으로 전환하거나 지금 로그인된 계정을 등록하세요.",
+         "The current Claude login is not one of the registered accounts — switch to an account below, or register the current login.")}
+         <button class="switchbtn" onclick="addCurrentLogin(this)">${L("현재 로그인 계정 등록", "Register current login")}</button></div>`
+      : "");
+  const listHtml = others.length
+    ? `<div class="list">
+        <div class="list-head"><span>${L("계정", "Account")}</span><span>${L("세션 (5시간)", "Session (5h)")}</span><span>${L("주간 (7일)", "Weekly (7d)")}</span><span>${L("동작", "Actions")}</span></div>
+        ${others.map(row).join("")}
+      </div>`
+    : "";
+  $("board").innerHTML = top + listHtml + addPanel();
+  if (!booted) {
+    booted = true;
+    $("board").classList.add("boot");
+    requestAnimationFrame(runEntrance);
+    setTimeout(() => $("board").classList.remove("boot"), 1000);  // 재렌더 시 재생 방지
+  }
+}
+
+// 최초 로드 1회: 링 스윕 + 미터 채움 + 숫자 카운트업
+let booted = false;
+function runEntrance() {
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  document.querySelectorAll(".ring-fill").forEach((c) => {
+    const target = c.getAttribute("stroke-dashoffset");
+    const full = c.getAttribute("stroke-dasharray");
+    c.style.transition = "none";
+    c.setAttribute("stroke-dashoffset", full);
+    void c.getBoundingClientRect();
+    c.style.transition = "";
+    requestAnimationFrame(() => c.setAttribute("stroke-dashoffset", target));
+  });
+  document.querySelectorAll(".meter .fill").forEach((f) => {
+    const w = f.style.width;
+    f.style.transition = "none";
+    f.style.width = "0%";
+    void f.getBoundingClientRect();
+    f.style.transition = "";
+    requestAnimationFrame(() => { f.style.width = w; });
+  });
+  document.querySelectorAll(".cell-pct").forEach((el) => {
+    const target = parseInt(el.textContent, 10);
+    if (isNaN(target)) return;
+    const t0 = performance.now(), dur = 800;
+    const step = (t) => {
+      const p = Math.min((t - t0) / dur, 1);
+      el.textContent = `${Math.round(target * (1 - Math.pow(1 - p, 3)))}%`;  // ease-out
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+  document.querySelectorAll(".ring-pct").forEach((el) => {
+    const label = el.childNodes[0];   // "46" 텍스트 노드 (뒤에 <span>%</span>)
+    const target = parseInt(label?.textContent, 10);
+    if (isNaN(target)) return;
+    const t0 = performance.now(), dur = 800;
+    const step = (t) => {
+      const p = Math.min((t - t0) / dur, 1);
+      label.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  });
+}
+
+// 서버 빌드 지문(서빙 시 치환) — 서버가 다른 빌드로 바뀌면(업데이트) 스스로 새로고침해
+// 예전 화면에 머물지 않는다. 입력 중이면 끝날 때까지 미룬다.
+const PAGE_BUILD = "__DASHBOARD_BUILD__";
+function reloadIfServerChanged(data) {
+  if (!data.build || data.build === PAGE_BUILD) return false;
+  if (addActive || aliasEditSlot !== null || limitsEditSlot !== null || addOpen) return false;
+  location.reload();
+  return true;
+}
+
+function render(data) {
+  if (reloadIfServerChanged(data)) return;
+  lastStatus = data;
+  // 서버 설정의 UI 언어 채택 — 바뀌면 정적 라벨·날짜 포맷까지 다시 그린다
+  if (data.language && data.language !== LANG) {
+    LANG = data.language;
+    localStorage.setItem("limitpilot-lang", LANG);
+    buildFormatters();
+    document.documentElement.lang = LANG;
+    applyTheme(themeMode());
+  }
+  $("thrLbl").textContent = L("세션 임계", "Session threshold");
+  $("wthrLbl").textContent = L("주간 임계", "Weekly threshold");
+  $("wthrFollow").textContent = L("세션과 같게", "Match session");
+  const wthr = $("wthr");
+  wthr.setAttribute("aria-label", L("주간 임계(전역)", "Weekly threshold (global)"));
+  if (data.thresholdMin != null) { wthr.min = data.thresholdMin; wthr.max = data.thresholdMax; }
+  if (document.activeElement !== wthr && data.weeklyThreshold != null) {
+    wthr.value = Math.round(data.weeklyThreshold);
+    $("wthrVal").textContent = `${Math.round(data.weeklyThreshold)}%`;
+  }
+  $("wthrFollow").hidden = !data.weeklyThresholdSet;
+  $("wthrSub").textContent = data.weeklyThresholdSet ? "" : L("(세션과 동일)", "(same as session)");
+  const auto = data.autoSwitch === true;
+  $("autoBtn").classList.toggle("on", auto);
+  $("autoBtn").setAttribute("aria-pressed", String(auto));
+  $("autoLbl").textContent = L(`자동 전환 ${auto ? "켜짐" : "꺼짐(알림만)"}`,
+                               `Auto-switch ${auto ? "on" : "off (notify only)"}`);
+  $("autoBtn").title = L("켜면 감시 데몬이 임계에서 다른 계정으로 직접 전환합니다. 끄면 알림만 보냅니다 — 클릭해 전환",
+                         "When on, the daemon switches accounts at the threshold; when off it only notifies — click to toggle");
+  const ka = data.keepalive === true;
+  $("kaBtn").classList.toggle("on", ka);
+  $("kaBtn").setAttribute("aria-pressed", String(ka));
+  $("kaLbl").textContent = L(`유지 호출 ${ka ? "켜짐" : "꺼짐"}`, `Keep-alive ${ka ? "on" : "off"}`);
+  $("kaBtn").title = L("계정마다 하루 1번 최소(1토큰) 호출로 연결을 유지합니다 — 클릭해 전환",
+                       "Sends one minimal (1-token) request per account per day to keep it connected — click to toggle");
+  const expiring = data.priority !== "balanced";
+  $("prioBtn").classList.toggle("on", expiring);
+  $("prioLbl").textContent = expiring ? L("리셋 임박 우선", "Expiring first") : L("사용률 최저 우선", "Lowest usage first");
+  $("prioBtn").title = expiring
+    ? L("주간 리셋이 임박해 곧 사라질 여유분을 가진 계정부터 사용합니다 — 클릭하면 사용률 최저 우선으로",
+        "Uses accounts whose weekly quota is about to reset first — click for lowest-usage first")
+    : L("사용률이 가장 낮은 계정부터 사용합니다 — 클릭하면 리셋 임박 우선으로",
+        "Uses the least-used account first — click for expiring-first");
+  const burn = data.finalBurn === true;
+  const burnH = Math.round(data.finalBurnHours ?? 5);
+  $("burnBtn").classList.toggle("on", burn);
+  $("burnLbl").textContent = L(`리셋 전 소진 ${burn ? "켜짐" : "꺼짐"}`, `Use-up before reset ${burn ? "on" : "off"}`);
+  const burnM = Math.round(data.sessionBurnMinutes ?? 30);
+  $("burnBtn").title = L(`주간 리셋 ${burnH}시간 전·세션 리셋 ${burnM}분 전 계정은 임계를 무시하고 최우선으로 남은 한도를 다 씁니다(세션 소진은 주간 임계·최대치 아래일 때만) — 클릭해 전환`,
+                         `Accounts within ${burnH}h of the weekly reset or ${burnM} min of the session reset are used first, ignoring thresholds, until used up (session use-up only below weekly limits) — click to toggle`);
+  $("refreshAllBtn").title = L("전체 사용량 새로고침(로그인되지 않은 계정 포함)", "Refresh all usage (including signed-out accounts)");
+  $("refreshAllBtn").setAttribute("aria-label", $("refreshAllBtn").title);
+  // 인증 코드/게이트웨이 토큰/별칭 입력 중에는 주기 갱신이 입력값·포커스를 덮지 않는다
+  if (!addActive && aliasEditSlot === null && limitsEditSlot === null && !addOpen) renderBoard();
+  $("updated").innerHTML =
+    `<span class="pulse"></span>${L("갱신", "Updated")} <time>${fmtClock.format(new Date(data.generatedAt * 1000))}</time>`;
+  $("footer").textContent = data.lastSwitchAt
+    ? L(`마지막 자동/수동 전환 ${fmtTime.format(new Date(data.lastSwitchAt * 1000))}`,
+        `Last auto/manual switch ${fmtTime.format(new Date(data.lastSwitchAt * 1000))}`)
+    : "";
+  const thr = $("thr");
+  thr.setAttribute("aria-label", L("세션 임계(전역)", "Session threshold (global)"));
+  if (data.thresholdMin != null) { thr.min = data.thresholdMin; thr.max = data.thresholdMax; }
+  if (document.activeElement !== thr) {
+    thr.value = Math.round(data.threshold);
+    $("thrVal").textContent = `${Math.round(data.threshold)}%`;
+    syncSliderFill();
+  }
+}
+
+// ── 별칭 편집 ───────────────────────────────────────────
+function beginAliasEdit(slot) {
+  const target = regSlots().find((s) => s.slot === slot);
+  if (!target) return;
+  aliasEditSlot = slot;
+  aliasDraft = target.alias || "";
+  renderBoard();
+  requestAnimationFrame(() => {
+    const input = $(`aliasInput-${slot}`);
+    if (input) { input.focus(); input.select(); }
+  });
+}
+
+function cancelAliasEdit() {
+  aliasEditSlot = null;
+  aliasDraft = "";
+  renderBoard();
+}
+
+function aliasKey(event, slot) {
+  if (event.key === "Enter") { event.preventDefault(); saveAlias(slot); }
+  if (event.key === "Escape") { event.preventDefault(); cancelAliasEdit(); }
+}
+
+async function saveAlias(slot) {
+  const alias = aliasDraft.trim();
+  if (alias.length > 80) { toast(L("별칭은 80자 이내로 입력하세요", "Alias must be 80 characters or fewer")); return; }
+  try {
+    const r = await fetch(`/api/slot/${slot}/alias`, {
+      method: "POST",
+      headers: { "X-LimitPilot": "1", "Content-Type": "application/json" },
+      body: JSON.stringify({ alias }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    aliasEditSlot = null;
+    aliasDraft = "";
+    toast(d.message || L("별칭 저장됨", "Alias saved"));
+  } catch (e) {
+    toast(L(`저장 실패: ${e.message}`, `Save failed: ${e.message}`));
+  }
+  refresh();
+}
+
+// ── 설정·토스트·액션 ────────────────────────────────────
+const REFRESH_SEC = 5;  // 표시 폴링 — 로컬 스냅샷 읽기라 짧아도 usage API와 무관
+let refreshTimer = null;
+
+function syncSliderFill() {
+  for (const id of ["thr", "wthr"]) {
+    const el = $(id);
+    const fill = (el.value - el.min) / (el.max - el.min) * 100;
+    el.style.setProperty("--fill", `${fill}%`);
+  }
+}
+
+function scheduleRefresh() {
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(refresh, REFRESH_SEC * 1000);
+}
+
+async function postSettings(body) {
+  try {
+    const r = await fetch("/api/settings", {
+      method: "POST",
+      headers: { "X-LimitPilot": "1", "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    toast(d.message || L("설정 저장됨", "Settings saved"));
+  } catch (e) {
+    toast(L(`실패: ${e.message}`, `Failed: ${e.message}`));
+  }
+  refresh();
+}
+
+let thrPostTimer = null;
+$("thr").addEventListener("input", (e) => {
+  $("thrVal").textContent = `${e.target.value}%`;
+  syncSliderFill();
+});
+$("thr").addEventListener("change", (e) => {
+  clearTimeout(thrPostTimer);
+  thrPostTimer = setTimeout(() => postSettings({ threshold: Number(e.target.value) }), 150);
+});
+$("wthr").addEventListener("input", (e) => {
+  $("wthrVal").textContent = `${e.target.value}%`;
+  syncSliderFill();
+});
+let wthrPostTimer = null;
+$("wthr").addEventListener("change", (e) => {
+  clearTimeout(wthrPostTimer);
+  wthrPostTimer = setTimeout(() => postSettings({ weeklyThreshold: Number(e.target.value) }), 150);
+});
+const followSessionThreshold = () => postSettings({ weeklyThreshold: null });
+
+let toastTimer = null;
+function toast(msg) {
+  const el = $("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 2600);
+}
+
+// ── 확인 모달 — 계정 삭제 등 파괴적 동작에 브라우저 confirm 대신 사용.
+// Promise<boolean> 반환(확인=true). Esc/취소/배경클릭=false, Enter=확인. ──
+function showConfirm({ title, body, confirmLabel, cancelLabel, danger }) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.innerHTML = `
+      <div class="modal" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+        <h2>${esc(title)}</h2>
+        <p>${esc(body)}</p>
+        <div class="modal-actions">
+          <button class="modal-btn" data-act="cancel">${esc(cancelLabel || L("취소", "Cancel"))}</button>
+          <button class="modal-btn${danger ? " danger" : ""}" data-act="ok">${esc(confirmLabel || L("확인", "OK"))}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add("show"));
+    let done = false;
+    const close = (result) => {
+      if (done) return;
+      done = true;
+      document.removeEventListener("keydown", onKey);
+      overlay.classList.remove("show");
+      setTimeout(() => overlay.remove(), 180);
+      resolve(result);
+    };
+    // Enter는 가로채지 않는다 — 포커스된 버튼이 기본 동작으로 처리한다(파괴적 모달은
+    // '취소'에 포커스되어 있어 실수로 Enter를 눌러도 삭제되지 않는다). Esc만 취소로.
+    const onKey = (e) => {
+      if (e.key === "Escape") { e.preventDefault(); close(false); }
+    };
+    document.addEventListener("keydown", onKey);
+    overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) close(false); });
+    overlay.querySelector('[data-act="cancel"]').onclick = () => close(false);
+    overlay.querySelector('[data-act="ok"]').onclick = () => close(true);
+    // 파괴적 동작은 '취소'에 포커스(실수로 Enter 눌러 삭제되는 것 방지)
+    requestAnimationFrame(() => {
+      const f = overlay.querySelector(danger ? '[data-act="cancel"]' : '[data-act="ok"]');
+      if (f) f.focus();
+    });
+  });
+}
+
+async function mutate(slot, action) {
+  try {
+    const r = await fetch(`/api/slot/${slot}/${action}`, {
+      method: "POST", headers: { "X-LimitPilot": "1" },
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    toast(d.message || L("완료", "Done"));
+  } catch (e) {
+    toast(L(`실패: ${e.message}`, `Failed: ${e.message}`));
+  }
+  refresh();
+}
+
+function refreshTip(s) {
+  const base = L("사용량 새로고침", "Refresh usage");
+  const ka = s.keepalive;
+  if (!ka) return base;
+  const when = fmtTime.format(new Date(ka.at * 1000));
+  return `${base} · ${L("마지막 유지 호출", "Last keep-alive")} ${when} ${ka.ok ? "✓" : `✗ ${ka.err || ""}`}`;
+}
+
+async function postAction(url, button) {
+  if (button) { button.disabled = true; button.classList.add("spinning"); }
+  try {
+    const r = await fetch(url, { method: "POST", headers: { "X-LimitPilot": "1" } });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    toast(d.message || L("완료", "Done"));
+  } catch (e) {
+    toast(L(`실패: ${e.message}`, `Failed: ${e.message}`));
+  } finally {
+    if (button) { button.disabled = false; button.classList.remove("spinning"); }
+  }
+  refresh();
+}
+const refreshSlot = (slot, button) => postAction(`/api/slot/${slot}/refresh`, button);
+const refreshAll = (button) => postAction("/api/refresh", button);
+// 자동 전환은 옵트인 — 켤 때만 확인창(기본 포커스는 취소)을 거친다
+async function toggleAutoSwitch() {
+  if (lastStatus?.autoSwitch === true) return postSettings({ autoSwitch: false });
+  const ok = await showConfirm({
+    title: L("자동 전환을 켤까요?", "Turn on automatic switching?"),
+    body: L("활성 계정이 임계에 닿으면 감시 데몬이 등록된 다른 계정으로 Claude Code 로그인을 바꿉니다.\n각 계정의 이용 약관·요금제 조건을 지켜 본인 계정에만 쓰세요.",
+            "When the active account reaches its threshold, the daemon switches Claude Code to another registered account.\nUse it only with your own accounts and follow each account's terms and plan conditions."),
+    confirmLabel: L("켜기", "Turn on"),
+    danger: true,                         // 기본 포커스 = 취소
+    cancelLabel: L("취소", "Cancel"),
+  });
+  if (ok) postSettings({ autoSwitch: true });
+}
+const toggleKeepalive = () => postSettings({ keepalive: lastStatus?.keepalive !== true });
+const toggleFinalBurn = () => postSettings({ finalBurn: lastStatus?.finalBurn !== true });
+const togglePriority = () => postSettings({ priority: lastStatus?.priority === "balanced" ? "expiring" : "balanced" });
+
+async function activateSlot(slot, button) {
+  const liveStatus = lastStatus?.liveStatus;
+  const force = liveStatus === "unmanaged" || liveStatus === "unknown";
+  if (force) {
+    const reason = liveStatus === "unmanaged"
+      ? L("현재 Claude 로그인은 등록 슬롯 밖이라 백업할 수 없습니다.",
+          "The current Claude login is outside the registered slots and cannot be backed up.")
+      : L("현재 Claude 계정 식별자를 확인할 수 없습니다.",
+          "The current Claude account identity cannot be verified.");
+    const ok = await showConfirm({
+      title: L("강제 전환", "Force switch"),
+      body: `${reason}\n${L("선택한 슬롯으로 강제 전환할까요?", "Force-switch to the selected slot?")}`,
+      confirmLabel: L("강제 전환", "Force switch"),
+      danger: true,
+    });
+    if (!ok) return;
+  }
+  if (button) button.disabled = true;
+  try {
+    const r = await fetch(`/api/slot/${slot}/activate`, {
+      method: "POST",
+      headers: { "X-LimitPilot": "1", "Content-Type": "application/json" },
+      body: JSON.stringify({ force }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    toast(d.message || L(`슬롯 ${slot} 활성화 완료`, `Slot ${slot} activated`));
+  } catch (e) {
+    toast(L(`전환 실패: ${e.message}`, `Switch failed: ${e.message}`));
+  }
+  refresh();
+}
+
+async function removeSlot(slot) {
+  const s = regSlots().find((x) => x.slot === slot);
+  const label = s ? (s.label || s.email || L(`슬롯 ${slot}`, `Slot ${slot}`))
+                  : L(`슬롯 ${slot}`, `Slot ${slot}`);
+  const ok = await showConfirm({
+    title: L("계정 삭제", "Delete account"),
+    body: L(`${label} 계정을 삭제할까요?\n키체인 백업도 함께 제거됩니다.`,
+            `Delete ${label}?\nIts keychain backup is removed too.`),
+    confirmLabel: L("삭제", "Delete"),
+    danger: true,
+  });
+  if (!ok) return;
+  mutate(slot, "delete");
+}
+
+// ── 계정 추가 플로우 (격리된 공식 OAuth — 서버 워커가 등록) ──
+let addActive = false;
+let addUrl = null;
+let addCodeDraft = "";
+let addMessage = "";
+let addSessionId = null;
+let addGeneration = 0;
+
+async function gatewayAdd() {
+  gatewayDraft.alias = ($("gwAlias")?.value || "").trim();
+  gatewayDraft.baseUrl = ($("gwBase")?.value || "").trim();
+  gatewayDraft.modelId = ($("gwModel")?.value || "").trim();
+  gatewayDraft.authMode = $("gwAuth")?.value || "bearer";
+  gatewayDraft.token = $("gwToken")?.value || "";
+  gatewayDraft.inputTokenLimit = $("gwInputLimit")?.value || "0";
+  gatewayDraft.outputTokenLimit = $("gwOutputLimit")?.value || "0";
+  gatewayDraft.inputPricePerMillion = $("gwInputPrice")?.value || "0";
+  gatewayDraft.outputPricePerMillion = $("gwOutputPrice")?.value || "0";
+  gatewayDraft.costLimit = $("gwCostLimit")?.value || "0";
+  if (!gatewayDraft.baseUrl || !gatewayDraft.modelId || (!gatewayDraft.token && gatewayEditSlot === null)) {
+    toast(L("게이트웨이 URL, 모델 ID, 토큰을 모두 입력하세요", "Enter the gateway URL, model ID, and token"));
+    return;
+  }
+  const editingSlot = gatewayEditSlot;
+  const btn = $("gwAddBtn");
+  if (btn) { btn.disabled = true; btn.textContent = L("연결 테스트 중…", "Testing connection…"); }
+  try {
+    const r = await fetch(editingSlot === null ? "/api/gateway/add" : `/api/gateway/${editingSlot}/update`, {
+      method: "POST",
+      headers: { "X-LimitPilot": "1", "Content-Type": "application/json" },
+      body: JSON.stringify(gatewayDraft),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    gatewayDraft = { alias: "", baseUrl: "", modelId: "", token: "", authMode: "bearer",
+      inputTokenLimit: "0", outputTokenLimit: "0", inputPricePerMillion: "0",
+      outputPricePerMillion: "0", costLimit: "0" };
+    gatewayEditSlot = null;
+    addOpen = false;
+    toast(d.message || (editingSlot === null ? L("게이트웨이 등록 완료", "Gateway registered") : L("게이트웨이 수정 완료", "Gateway updated")));
+    refresh();
+  } catch (e) {
+    toast(editingSlot === null
+      ? L(`등록 실패: ${e.message}`, `Registration failed: ${e.message}`)
+      : L(`수정 실패: ${e.message}`, `Update failed: ${e.message}`));
+    if (btn) { btn.disabled = false; btn.textContent = editingSlot === null ? L("연결 테스트 후 저장", "Test connection and save") : L("연결 테스트 후 수정", "Test connection and update"); }
+  }
+}
+
+async function addCancel() {
+  const sessionId = addSessionId;
+  addGeneration += 1;
+  addActive = false;
+  addUrl = null;
+  addCodeDraft = "";
+  addMessage = L("브라우저 로그인 대기 중", "Waiting for browser login");
+  addSessionId = null;
+  addOpen = false;
+  try {
+    if (sessionId) await fetch("/api/add/cancel", {
+      method: "POST",
+      headers: { "X-LimitPilot": "1", "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId }),
+    });
+  } catch (e) { /* 화면은 즉시 닫고 다음 시작이 이전 세션을 정리한다 */ }
+  refresh();
+}
+
+async function addStart() {
+  const generation = ++addGeneration;
+  const el = $("addAlias");
+  const alias = el ? el.value.trim() : "";
+  const btn = $("addBtn");
+  if (btn) { btn.disabled = true; btn.textContent = L("브라우저 여는 중…", "Opening browser…"); }
+  try {
+    const r = await fetch("/api/add/start", {
+      method: "POST",
+      headers: { "X-LimitPilot": "1", "Content-Type": "application/json" },
+      body: JSON.stringify({ alias }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (generation !== addGeneration) return;
+    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    if (!d.sessionId) throw new Error(L("로그인 세션 ID를 받지 못했습니다", "No login session ID received"));
+    addActive = true;
+    addUrl = d.url || null;
+    addCodeDraft = "";
+    addMessage = d.message || L("브라우저 로그인 대기 중", "Waiting for browser login");
+    addSessionId = d.sessionId;
+    renderBoard();
+    pollAdd(generation, d.sessionId);
+  } catch (e) {
+    if (generation !== addGeneration) return;
+    toast(L(`실패: ${e.message}`, `Failed: ${e.message}`));
+    if (btn) { btn.disabled = false; btn.textContent = L("브라우저로 로그인해 추가", "Add via browser login"); }
+  }
+}
+
+async function addFeed() {
+  const generation = addGeneration;
+  const sessionId = addSessionId;
+  const el = $("addCode");
+  const code = el ? el.value.trim() : "";
+  if (!code) { toast(L("코드를 붙여넣으세요", "Paste the code first")); return; }
+  addCodeDraft = code;
+  try {
+    const r = await fetch("/api/add/code", {
+      method: "POST",
+      headers: { "X-LimitPilot": "1", "Content-Type": "application/json" },
+      body: JSON.stringify({ code, sessionId }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (generation !== addGeneration || sessionId !== addSessionId) return;
+    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    addMessage = L("인증 코드 처리 중", "Processing auth code");
+    renderBoard();
+    toast(L("코드 전달됨 — 등록 대기 중", "Code delivered — waiting for registration"));
+  } catch (e) {
+    if (generation === addGeneration && sessionId === addSessionId) {
+      toast(L(`실패: ${e.message}`, `Failed: ${e.message}`));
+    }
+  }
+}
+
+function pollAdd(generation, sessionId) {
+  const tick = async () => {
+    if (!addActive || generation !== addGeneration || sessionId !== addSessionId) return;
+    try {
+      const r = await fetch("/api/add/status", { cache: "no-store" });
+      const d = await r.json();
+      if (!addActive || generation !== addGeneration || sessionId !== addSessionId) return;
+      if (d.sessionId && d.sessionId !== sessionId) {
+        addActive = false;
+        addUrl = null; addCodeDraft = ""; addSessionId = null; addOpen = false;
+        toast(L("다른 창에서 새 계정 로그인이 시작되었습니다", "A new account login started in another window"));
+        refresh(); return;
+      }
+      if (d.message && d.status === "running" && d.message !== addMessage) {
+        addMessage = d.message;
+        renderBoard();
+      }
+      if (d.status === "done") {
+        addActive = false;
+        addUrl = null; addCodeDraft = ""; addSessionId = null; addOpen = false;
+        toast(d.message || L("계정 추가됨", "Account added")); refresh(); return;
+      }
+      if (d.status === "error") {
+        addActive = false;
+        addUrl = null; addCodeDraft = ""; addSessionId = null;
+        toast(L(`추가 실패: ${d.message || "알 수 없음"}`, `Add failed: ${d.message || "unknown"}`)); refresh(); return;
+      }
+      if (d.status === "idle") {
+        addActive = false;
+        addUrl = null; addCodeDraft = ""; addSessionId = null; addOpen = false;
+        refresh(); return;
+      }
+    } catch (e) { /* 일시 오류 무시 */ }
+    setTimeout(tick, 2000);
+  };
+  tick();
+}
+
+// ── 갱신 루프 ───────────────────────────────────────────
+async function refresh() {
+  // 숨겨진 탭은 폴링하지 않는다 — 다시 보이면 visibilitychange 가 곧바로 갱신한다
+  if (document.hidden) return;
+  try {
+    // no-cache: 서버의 ETag 로 재검증 — 바뀐 것이 없으면 304(본문 없음)
+    const r = await fetch("/api/status", { cache: "no-cache" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    render(await r.json());
+    $("banner").style.display = "none";
+  } catch (e) {
+    $("banner").textContent = L("서버에 연결할 수 없습니다 — 대시보드 프로세스가 실행 중인지 확인하세요.",
+                                "Cannot reach the server — check that the dashboard process is running.");
+    $("banner").style.display = "block";
+  }
+}
+
+function tickCountdowns() {
+  document.querySelectorAll("[data-reset]").forEach((el) => {
+    const iso = el.getAttribute("data-reset");
+    if (iso) el.textContent = countdown(iso);
+  });
+}
+
+// ── 테마 전환: 시스템 → 라이트 → 다크 순환, localStorage 유지 ──
+const THEME_ICONS = {
+  auto: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+    stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor" stroke="none"/></svg>`,
+  light: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+    stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3 19 19M19 5l-1.7 1.7M6.7 17.3 5 19"/></svg>`,
+  dark: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+    stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z"/></svg>`,
+};
+const THEME_LABELS = () => (LANG === "en"
+  ? { auto: "System", light: "Light", dark: "Dark" }
+  : { auto: "시스템", light: "라이트", dark: "다크" });
+
+function themeMode() {
+  const t = localStorage.getItem("limitpilot-theme");
+  return t === "light" || t === "dark" ? t : "auto";
+}
+
+function applyTheme(mode) {
+  if (mode === "auto") {
+    delete document.documentElement.dataset.theme;
+    localStorage.removeItem("limitpilot-theme");
+  } else {
+    document.documentElement.dataset.theme = mode;
+    localStorage.setItem("limitpilot-theme", mode);
+  }
+  const btn = $("themeBtn");
+  btn.innerHTML = THEME_ICONS[mode];
+  btn.title = L(`테마: ${THEME_LABELS()[mode]} (클릭해 전환)`, `Theme: ${THEME_LABELS()[mode]} (click to cycle)`);
+  btn.setAttribute("aria-label", L("테마 전환", "Switch theme"));
+}
+
+function cycleTheme() {
+  const order = ["auto", "light", "dark"];
+  const next = order[(order.indexOf(themeMode()) + 1) % order.length];
+  applyTheme(next);
+  toast(L(`테마: ${THEME_LABELS()[next]}`, `Theme: ${THEME_LABELS()[next]}`));
+}
+
+// 창 프레즌스 — 연결이 살아 있는 동안 서버가 '창 열림'을 알고 중복 창을 막는다
+// EventSource 는 헤더를 붙일 수 없어 토큰을 쿼리로 보낸다(이 경로만 허용)
+const presence = new EventSource(
+  `/api/presence?build=${encodeURIComponent(PAGE_BUILD)}&token=${encodeURIComponent(API_TOKEN)}`);
+// 서버가 바뀌면 EventSource가 스스로 재연결한다 — 그 즉시 상태를 읽어 빌드 변경을 감지.
+// 백그라운드 창은 타이머가 느려지므로 폴링만 믿으면 새로고침이 늦어 창이 중복으로 열린다
+presence.onopen = () => refresh();
+
+applyTheme(themeMode());
+// 연습 모드 표시 — 가짜 계정·가상 사용량이라는 것을 화면에서 숨기지 않는다
+if (IS_DEMO) {
+  $("demoBadge").hidden = false;
+  $("demoBadge").title = L("연습용 목(mock) 모드: 가짜 계정 3개, 실제 자격증명·네트워크를 쓰지 않음",
+                           "Practice (mock) mode: three fake accounts, no real credentials or network");
+}
+// 위젯의 "브라우저로 계정 추가…" 는 #add 로 연다 — 추가 패널을 펼친 채 시작
+if (location.hash === "#add") { addOpen = true; }
+// 첫 응답 전에도 기억된 언어로 정적 문구를 맞춘다
+document.documentElement.lang = LANG;
+$("thrLbl").textContent = L("세션 임계", "Session threshold");
+$("wthrLbl").textContent = L("주간 임계", "Weekly threshold");
+$("updated").innerHTML = `<span class="pulse"></span>${L("연결 중…", "Connecting…")}`;
+syncSliderFill();
+refresh();
+scheduleRefresh();
+setInterval(tickCountdowns, 10_000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) refresh();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+# 루트에 고정한 패턴만 쓴다 — 넓은 패턴이 src/ 아래 파일을 가리지 않게
+
+# OS
+.DS_Store
+
+# Python 생성물
+__pycache__/
+*.py[co]
+/.venv/
+/dist/
+/build/
+/windows-build/
+
+# 로컬 비밀·서명 설정 — 절대 커밋하지 않는다
+gateway.local.env
+*.p12
+*.pfx
+*.cer
+*.keystore
