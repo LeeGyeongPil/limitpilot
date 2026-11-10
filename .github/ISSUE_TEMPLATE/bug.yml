@@ -1,0 +1,22 @@
+name: 버그 / Bug
+description: README대로 했는데 다르게 동작해요 / Something does not work as the README says
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: 무엇이 일어났나요? / What happened?
+      description: 실행한 명령과 나온 메시지를 그대로 붙여 주세요. / Paste the command and the output.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 기대한 결과 / Expected
+  - type: input
+    id: env
+    attributes:
+      label: 환경 / Environment
+      placeholder: "macOS 15 (M3) · Ubuntu 24.04 · Windows 11 / uv 0.x / mock or real mode"
+    validations:
+      required: true

@@ -1,0 +1,46 @@
+# 실제 키체인·launchctl·네트워크 없이(샌드박스·가짜 저장소) 전체 흐름을 검증한다.
+name: ci
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "17 3 * * 1"   # 매주 월요일 — 런타임·OS 이미지가 바뀌어 깨지지 않았는지 정기 확인
+  workflow_dispatch:
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12", "3.14"]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v10.3.3
+      - name: tests (mock / sandbox mode)
+        run: uv run --no-project --python ${{ matrix.python }} python -B -m unittest discover -s tests -t .
+      - name: practice tour
+        run: PYTHONPATH=src uv run --no-project --python ${{ matrix.python }} python -B -m limitpilot --demo --lang en tour
+      - name: icons are reproducible
+        run: uv run --no-project --python ${{ matrix.python }} python -B scripts/build_icons.py --out "$RUNNER_TEMP/icons" --check assets/icon
+      - name: menu bar app type-checks
+        run: swiftc -typecheck src/limitpilot/native/macos/main.swift
+      - name: menu bar app builds
+        run: PYTHONPATH=src uv run --no-project --python ${{ matrix.python }} python -B -m limitpilot widget build --out "$RUNNER_TEMP/build"
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v10.3.3
+      - name: tray compiles with the built-in csc
+        shell: cmd
+        run: >
+          %WINDIR%\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /target:winexe /codepage:65001
+          /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Web.Extensions.dll
+          /win32icon:src\limitpilot\native\icons\LimitPilot.ico
+          /out:%RUNNER_TEMP%\tray.exe src\limitpilot\native\windows\tray.cs
+      - name: tests (mock / sandbox mode)
+        # Windows 테스트 녹색화는 0.2.0(M2) 범위 — 결과는 보이되 실패해도 막지 않는다
+        continue-on-error: true
+        run: uv run --no-project --python 3.12 python -B -m unittest discover -s tests -t .

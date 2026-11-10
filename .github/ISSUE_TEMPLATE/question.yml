@@ -1,0 +1,11 @@
+name: 질문 / Question
+description: 이해가 안 되는 부분이나 더 알고 싶은 점 / Something unclear or worth explaining
+labels: [question]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: 질문 / Question
+      description: README의 어느 부분(절 제목)에 대한 질문인지 알려 주세요. / Which README section is this about?
+    validations:
+      required: true
