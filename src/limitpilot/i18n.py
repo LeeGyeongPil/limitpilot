@@ -116,6 +116,10 @@ _PAIRS = {
                          "활성 슬롯을 알 수 없습니다 — `switch <슬롯번호>`로 지정하세요"),
     "switch_no_candidate": ("No other account to switch to — sign in with another account and run `add`",
                             "전환할 다른 계정이 없습니다 — 다른 계정 로그인 후 `add`로 등록하세요"),
+    "switch_all_exhausted": ("Every other account is at its limit or over its weekly max — nothing to switch to. "
+                             "Name a slot (`switch <slot>`) to pick one anyway",
+                             "다른 계정이 모두 한도 소진이거나 주간 최대치를 넘었습니다 — 전환할 곳이 없습니다. "
+                             "그래도 옮기려면 슬롯 번호를 지정하세요(`switch <슬롯번호>`)"),
     "switch_already": ("Slot {n} ({email}) is already active", "이미 슬롯 {n}({email})이 활성입니다"),
     "switch_gateway_suffix": (" — running sessions pick it up shortly",
                               " — 실행 중 세션에는 잠시 후 반영"),
@@ -239,8 +243,18 @@ _PAIRS = {
     "help_status": ("same as list", "list 와 동일"),
     "help_switch": ("switch account (best candidate when the slot is omitted)",
                     "계정 전환(슬롯 생략 시 가장 알맞은 계정으로)"),
-    "help_switch_force": ("allow OFF / needs-login slots or overwrite an unregistered login",
-                          "OFF/격리 슬롯 선택 또는 현재 미등록 계정 덮어쓰기"),
+    "help_switch_force": ("allow OFF / needs-login / over-weekly-max slots or overwrite an unregistered login",
+                          "OFF/격리/주간 최대치 초과 슬롯 선택 또는 현재 미등록 계정 덮어쓰기"),
+    "switch_over_cap": ("Slot {n} is over its weekly max ({pct:.0f}% >= {cap:.0f}%) - not switching. "
+                        "Raise it with `cap {n} <pct>`, or use `switch {n} --force` "
+                        "(auto-switch may move away again on the next check)",
+                        "슬롯 {n}은 주간 최대치를 넘었습니다({pct:.0f}% >= {cap:.0f}%) - 전환하지 않습니다. "
+                        "`cap {n} <퍼센트>` 로 올리거나 `switch {n} --force` 를 쓰세요"
+                        "(자동 전환이 켜져 있으면 다음 확인에서 다시 옮겨질 수 있음)"),
+    "switch_over_cap_forced": ("Warning: slot {n} is over its weekly max ({pct:.0f}% >= {cap:.0f}%) - "
+                               "switching anyway (--force); auto-switch may move away again on the next check",
+                               "경고: 슬롯 {n}은 주간 최대치를 넘었습니다({pct:.0f}% >= {cap:.0f}%) - "
+                               "--force 로 전환합니다(자동 전환이 켜져 있으면 다음 확인에서 다시 옮겨질 수 있음)"),
     "help_auto": ("watch usage (and switch when auto-switch is on)",
                   "사용량 감시(자동 전환이 켜져 있으면 전환)"),
     "help_auto_once": ("run one check and exit (used by the daemon)", "1틱 실행 후 종료(데몬용)"),

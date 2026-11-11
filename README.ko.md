@@ -34,7 +34,7 @@ uv tool install git+https://github.com/LeeGyeongPil/limitpilot
 limitpilot --version
 ```
 ```text
-limitpilot 0.1.3
+limitpilot 0.2.0
 ```
 
 설치 없이 저장소에서 바로 실행할 수도 있습니다(이 문서의 명령 앞 `limitpilot` 을 `PYTHONPATH=src python3 -B -m limitpilot` 으로 바꿔 읽으면 됩니다).
@@ -80,6 +80,8 @@ sandbox: real keychain 0, network 0, launchctl 0
 ## 단계별 따라 하기
 
 모두 연습 모드로 따라 할 수 있습니다. 앞 단계에서 만든 연습 상태(투어가 끝난 상태: 활성 슬롯 2)를 이어서 씁니다. 연습 상태는 시스템 임시 폴더의 `limitpilot-demo` 폴더에 있고(`LIMITPILOT_DEMO_ROOT` 로 바꿀 수 있음), `tour` 를 다시 실행하면 처음 상태로 돌아갑니다.
+
+이 문서의 예시 출력은 영어 README 와 같은 화면을 보여 주려고 `--lang en` 을 썼습니다. 한국어로 보려면 `--lang ko` 로 바꾸거나 `LIMITPILOT_LANG=ko` 를 설정하세요(출력 문구만 한국어로 바뀌고 명령은 같습니다).
 
 ### 1단계 — 계정별 사용량 읽기
 
@@ -127,7 +129,7 @@ limitpilot --demo --lang en auto --once --dry-run
 
 ### 3단계 — 계정마다 한도 따로 정하기
 
-전체 임계(`threshold`) 말고 계정마다 세션 임계·주간 임계·주간 최대치를 따로 줄 수 있습니다. **주간 최대치(`--cap`)** 는 "이 계정은 주간 사용률이 이 값을 넘으면 자동 전환 후보로 쓰지 않는다" 는 안전 상한입니다.
+전체 임계(`threshold`) 말고 계정마다 세션 임계·주간 임계·주간 최대치를 따로 줄 수 있습니다. **주간 최대치(`--cap`)** 는 "이 계정은 주간 사용률이 이 값을 넘으면 자동 전환 후보로 쓰지 않는다" 는 안전 상한입니다. 슬롯 번호를 지정한 수동 `switch N` 도 그 슬롯이 이미 최대치를 넘었으면 경고하고 멈춥니다(종료 코드 3). 그래도 전환하려면 `--force` 를 붙이고, 대시보드는 "그래도 전환" 확인 창을 띄웁니다.
 
 ```bash
 limitpilot --demo --lang en limits 1 --session 80 --cap 70
@@ -150,6 +152,30 @@ Slot 1: session threshold 80% · weekly threshold 70%(default) · weekly max 70%
 ```
 
 `list` 에도 계정별 한도가 표시됩니다: `Slot 1 [limits session 80·weekly 70·max 70%]: work ...`
+
+**최대치를 넘은 슬롯으로 수동 전환하기.** 연습용 슬롯 1의 주간 사용률은 41% 입니다. 최대치를 30% 로 낮추면 `switch 1` 은 경고만 하고 전환하지 않으며 종료 코드 3 으로 끝납니다. `switch 1 --force` 는 비슷한 경고("... switching anyway (--force)")를 남기고 전환합니다(종료 코드 0). 슬롯 번호를 생략한 `switch` 는 이 확인 없이, 자동으로 고르는 후보에서 최대치를 넘었거나 소진된 계정을 뺍니다. 남은 계정이 없으면 전환하지 않고 안내 문구와 함께 종료 코드 1 로 끝납니다(v0.1.3 이하는 이런 슬롯을 고를 수 있었습니다).
+
+```bash
+limitpilot --demo --lang en limits 1 --cap 30
+limitpilot --demo --lang en switch 1
+echo "exit $?"
+limitpilot --demo --lang en switch
+echo "exit $?"
+limitpilot --demo --lang en cap 1 70
+```
+```text
+[2026-11-10 09:20:33] Slot 1 (work@example.com) weekly cap 30%
+Slot 1: session threshold 80% · weekly threshold 30%(default) · weekly max 30%
+[2026-11-10 09:20:33] Slot 1 is over its weekly max (41% >= 30%) - not switching. Raise it with `cap 1 <pct>`, or use `switch 1 --force` (auto-switch may move away again on the next check)
+exit 3
+[2026-11-10 09:20:33] Every other account is at its limit or over its weekly max — nothing to switch to. Name a slot (`switch <slot>`) to pick one anyway
+exit 1
+[2026-11-10 09:20:33] Slot 1 (work@example.com) weekly cap 70%
+```
+
+![수동 전환 거부: 슬롯 1이 주간 최대치 30% 를 넘어 종료 코드 3](docs/images/06-switch-over-cap.ko.png)
+
+_그림: 최대치를 넘은 슬롯으로 `switch 1` 을 하면 경고 후 종료 코드 3 으로 멈춥니다._
 
 ### 4단계 — 새 계정 추가와 유지 호출(연습 모드 안내)
 
@@ -213,7 +239,7 @@ Error: <폴더>/partial.env is missing ANTHROPIC_MODEL, ANTHROPIC_AUTH_TOKEN - a
 limitpilot --demo --lang en doctor
 ```
 ```text
-ok    limitpilot 0.1.3 — Python 3.15.2 on darwin
+ok    limitpilot 0.2.0 — Python 3.15.2 on darwin
 ok    credential store — fake
 ok    ~/.claude.json — oauthAccount found
 ok    daemon not installed — `limitpilot install-daemon` turns on watching
@@ -236,6 +262,8 @@ Dashboard started: http://127.0.0.1:8748/ (DEMO - practice mock mode)
 출력된 주소를 브라우저로 열면 가짜 데이터로 계정 카드(임계·주간 최대치·상태 배지), 자동 전환 켜기·끄기, 계정 추가 패널을 볼 수 있습니다. 대시보드는 `127.0.0.1` 에서만 열리고 실행할 때마다 새 API 토큰을 씁니다. `--no-open` 없이 실행하면 연습 모드에서는 브라우저를 직접 열지 않고 `Practice mode: open http://127.0.0.1:8748/ in your browser yourself ...` 라고 안내한 뒤 계속 서비스합니다. 끝내려면 Ctrl+C 를 누릅니다.
 
 메뉴바 위젯(macOS)은 `limitpilot widget install` 로 내 PC 에서 빌드·설치한 뒤 메뉴바 아이콘(게이지 + `42%` 같은 활성 계정 사용률)으로 엽니다. 계정별 5시간·주간 막대와 다음 후보를 보여 줍니다. Windows 는 같은 명령이 트레이 앱을 만듭니다.
+
+대시보드에서는 주간 최대치를 넘은 슬롯의 "전환" 버튼이 먼저 확인 창("주간 최대치 초과" / "그래도 전환")을 띄웁니다. 확인하면 그대로 전환하고 취소하면 아무 일도 하지 않습니다. 메뉴바 위젯과 Windows 트레이는 `--force` 없이 `switch N` 을 호출하므로 전환하지 않고 같은 경고 문구를 보여 줍니다.
 
 (대시보드·위젯 화면 그림은 이 문서에 아직 없습니다. 문서용 촬영 환경에서 브라우저와 네이티브 앱을 띄울 수 없었습니다.)
 
@@ -263,7 +291,7 @@ limitpilot dashboard                      # 로컬 대시보드 열기
 | `remove` / `enable` / `disable` | 슬롯 등록 해제 / 자동 전환 후보에 넣기 / 빼기 | `limitpilot disable 3` |
 | `list`, `status` | 사용량·상태 표시 | `limitpilot list` |
 | `refresh` | 사용량 즉시 새로고침 | `limitpilot refresh 2` |
-| `switch [슬롯] [--force]` | 전환(슬롯 생략 시 도구가 고른 계정) | `limitpilot switch 2` |
+| `switch [슬롯] [--force]` | 전환(슬롯 생략 시 도구가 고른 계정). 지정한 슬롯이 이미 주간 최대치를 넘었으면 `--force` 없이는 멈춥니다(종료 코드 3) | `limitpilot switch 2` |
 | `auto [--once] [--dry-run]` | 60초마다 감시하는 루프(포그라운드, Ctrl+C 로 끝). `--once` 는 1회만, `--dry-run` 은 결정만 보여 주고 전환하지 않음 | `limitpilot auto --once --dry-run` |
 | `limits 슬롯 [--session N --weekly N --cap N]` | 계정별 세션 임계·주간 임계·주간 최대치(`default` 로 되돌림) | `limitpilot limits 1 --session 80` |
 | `cap 슬롯 N` | 계정별 주간 최대치(%) | `limitpilot cap 1 70` |
@@ -277,7 +305,7 @@ limitpilot dashboard                      # 로컬 대시보드 열기
 | `purge` | 데몬·백업·상태·로그 완전 삭제(`PURGE` 를 입력해야 진행) | `limitpilot purge` |
 | `--demo`, `--lang en\|ko` | 연습 모드, 출력 언어(전역 옵션, 명령 앞에 둠) | `limitpilot --demo tour` |
 
-종료 코드: 0 성공·전환함 · 1 오류 · 2 할 일 없음(`auto --once` 에서 임계 미만) · 3 전환할 수 없음 · 4 삭제 진행 중. 잘못된 입력은 고칠 방법을 한 줄로 알려 줍니다.
+종료 코드: 0 성공·전환함 · 1 오류 · 2 할 일 없음(`auto --once` 에서 임계 미만) · 3 전환할 수 없음(주간 최대치 초과 슬롯 포함) · 4 삭제 진행 중. 잘못된 입력은 고칠 방법을 한 줄로 알려 줍니다.
 
 ```bash
 limitpilot --demo --lang en config threshold abc
@@ -407,11 +435,18 @@ Active slot: 2 · 3 account(s) · threshold 90% · priority expiring · auto-swi
 ## 보안 메모
 
 - **토큰 위치**: macOS 는 키체인(서비스 `limitpilot`), Windows 는 사용자 프로필 아래 `~/.limitpilot/slots/slot-N.json` 파일입니다. `state.json`·로그·대시보드 화면에는 토큰이 들어가지 않습니다.
-- **Windows 슬롯 파일은 암호화하지 않습니다.** 사용자 프로필 폴더 권한(ACL)으로만 보호되며, Claude Code 자신의 `%USERPROFILE%\.claude\.credentials.json` 과 같은 보호 수준입니다([Claude Code 문서 Credential management](https://code.claude.com/docs/en/iam), 2026-11-10 확인). DPAPI 암호화는 0.2.0 에서 검토할 항목입니다.
+- **Windows 슬롯 파일은 암호화하지 않습니다.** 사용자 프로필 폴더 권한(ACL)으로만 보호되며, Claude Code 자신의 `%USERPROFILE%\.claude\.credentials.json` 과 같은 보호 수준입니다([Claude Code 문서 Credential management](https://code.claude.com/docs/en/iam), 2026-11-10 확인). DPAPI 암호화는 아직 구현하지 않았습니다.
 - **`gateway.local.env`** 에는 게이트웨이 토큰이 들어갑니다. 이 저장소의 `.gitignore` 에 들어 있지만, 다른 곳에 둘 때도 커밋·공유하지 마세요.
 - **`gateway-key`**(도움말에 나오지 않는 숨김 명령, 서드파티 게이트웨이용 `apiKeyHelper`)는 API 키를 표준 출력으로 그대로 내보냅니다. 터미널에서 직접 실행하면 키가 화면과 스크롤백에 남고, 셸 기록·화면 공유·로그 수집에 노출될 수 있으니 사람이 직접 실행하지 마세요.
 - **대시보드**는 `127.0.0.1` 에서만 열리고, 실행할 때마다 새 API 토큰을 만들어 페이지에 주입합니다. 토큰·Host·Origin 이 맞지 않는 요청은 거부합니다. 같은 PC 의 다른 사용자 계정이 있는 환경에서는 대시보드를 켜 두지 마세요.
 - **전부 지우기**: `limitpilot purge` 는 상시 감시 등록, 계정 백업(키체인 항목·슬롯 파일), 설정·상태·로그를 완전히 삭제합니다. `PURGE` 를 입력해야 진행하며, 현재 Claude Code 로그인과 Claude 설정·기록은 남깁니다.
+
+## 알려진 한계
+
+- 대시보드에서 Ctrl+C 로 끝낼 때 `KeyboardInterrupt` 트레이스백이 출력될 수 있습니다. 대시보드는 그래도 종료됩니다.
+- `LIMITPILOT_DEMO_ROOT` 를 미리 만든 폴더(빈 폴더 포함)로 지정하면 트레이스백과 함께 실패합니다. 아직 없는 경로를 쓰세요.
+- 한국어 경고는 슬롯 번호 뒤에 조사 "은" 을 고정으로 붙여("슬롯 2은") 일부 번호에서 어색합니다.
+- 연습 모드에서는 수동 전환 뒤 사용량을 시나리오 값으로 다시 읽어, 다른 슬롯의 사용량이 바뀐 것처럼 보일 수 있습니다.
 
 ## 이용 시 주의
 

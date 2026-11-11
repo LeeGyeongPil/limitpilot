@@ -265,8 +265,13 @@ def apply_settings(body: dict) -> str:
     return " · ".join(changed)
 
 
-def mutate_slot(n: int, action: str, force: bool = False) -> str:
-    """슬롯 관리 쓰기 — CLI와 동일한 검증(활성 슬롯 보호)을 ca 함수에 위임."""
+class OverCapError(LimitPilotError):
+    """Manual activation target is over its weekly max (HTTP 409, code ``over_cap``)."""
+
+
+def mutate_slot(n: int, action: str, force: bool = False, over_cap_ok=None) -> str:
+    """슬롯 관리 쓰기 — CLI와 동일한 검증(활성 슬롯 보호)을 ca 함수에 위임.
+    over_cap_ok: 주간 최대치 초과 확인 여부(None 이면 force 를 따른다)."""
     with locks.state_lock():
         st = state.load_state()
         lang = state.get_settings(st)["language"]
@@ -288,6 +293,15 @@ def mutate_slot(n: int, action: str, force: bool = False) -> str:
                 raise LimitPilotError(status_mod.tr(
                     lang, f"슬롯 {n}은 자격증명 오류로 격리됐습니다 — 브라우저로 다시 로그인하세요",
                     f"Slot {n} is quarantined (credential error) — log in again via browser"))
+            skip_cap = force if over_cap_ok is None else over_cap_ok
+            over = None if skip_cap else limits.manual_switch_over_cap(st, slot)
+            if over is not None:
+                raise OverCapError(status_mod.tr(
+                    lang,
+                    f"슬롯 {n}은 주간 최대치를 넘었습니다({over[0]:.0f}% >= {over[1]:.0f}%) — "
+                    "자동 전환이 켜져 있으면 다음 확인에서 다시 옮겨질 수 있습니다",
+                    f"Slot {n} is over its weekly max ({over[0]:.0f}% >= {over[1]:.0f}%) — "
+                    "auto-switch may move away again on the next check"))
             gateway_transition = limits.is_gateway_slot(slot) or st.get("gatewayRestore") is not None
             st["manualChoiceAt"] = time.time()  # 사용자 선택 — 리셋 임박 선제 이동 유예
             outcome = switch.perform_switch(st, n, force=force)
@@ -636,15 +650,23 @@ class Handler(BaseHTTPRequestHandler):
                 return
             action = m.group(2)
             force = False
+            over_cap_ok = None
             if action == "activate":
                 body = self._read_json_body()
                 force = body.get("force", False)
                 if not isinstance(force, bool):
                     raise LimitPilotError(status_mod.tr(status_mod._lang(), "force 값은 true 또는 false여야 합니다",
                                               "force must be true or false"))
-            msg = mutate_slot(int(m.group(1)), action, force=force)
+                over_cap_ok = body.get("overCapOk")
+                if over_cap_ok is not None and not isinstance(over_cap_ok, bool):
+                    raise LimitPilotError(status_mod.tr(status_mod._lang(), "overCapOk 값은 true 또는 false여야 합니다",
+                                              "overCapOk must be true or false"))
+            msg = mutate_slot(int(m.group(1)), action, force=force, over_cap_ok=over_cap_ok)
             self._send(200, "application/json; charset=utf-8",
                        json.dumps({"ok": True, "message": msg}, ensure_ascii=False).encode())
+        except OverCapError as e:
+            self._send(409, "application/json; charset=utf-8",
+                       json.dumps({"error": str(e), "code": "over_cap"}, ensure_ascii=False).encode())
         except LimitPilotError as e:
             # 우리가 만든 검증 메시지만 — 토큰이 실릴 수 없는 경로
             self._send(400, "application/json; charset=utf-8",

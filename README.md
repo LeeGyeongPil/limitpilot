@@ -40,7 +40,7 @@ uv tool install git+https://github.com/LeeGyeongPil/limitpilot
 limitpilot --version
 ```
 ```text
-limitpilot 0.1.3
+limitpilot 0.2.0
 ```
 
 You can also run it straight from the repository without installing (read `limitpilot` at the start of each command in this document as `PYTHONPATH=src python3 -B -m limitpilot`).
@@ -133,7 +133,7 @@ limitpilot --demo --lang en auto --once --dry-run
 
 ### Step 3 — Set limits per account
 
-Besides the global threshold (`threshold`), you can give each account its own session threshold, weekly threshold, and weekly maximum. The **weekly maximum (`--cap`)** is a safety ceiling meaning "if this account's weekly usage exceeds this value, do not use it as an auto-switch candidate."
+Besides the global threshold (`threshold`), you can give each account its own session threshold, weekly threshold, and weekly maximum. The **weekly maximum (`--cap`)** is a safety ceiling meaning "if this account's weekly usage exceeds this value, do not use it as an auto-switch candidate." A manual `switch N` to a slot already over its maximum also stops with a warning (exit 3); add `--force` to switch anyway, and the dashboard asks "Switch anyway" instead.
 
 ```bash
 limitpilot --demo --lang en limits 1 --session 80 --cap 70
@@ -156,6 +156,30 @@ Slot 1: session threshold 80% · weekly threshold 70%(default) · weekly max 70%
 ```
 
 `list` also shows per-account limits: `Slot 1 [limits session 80·weekly 70·max 70%]: work ...`
+
+**Switching by hand to a slot over its maximum.** Practice slot 1 has 41% weekly usage. If you lower its maximum to 30%, `switch 1` only warns and does not switch; it ends with exit code 3. `switch 1 --force` prints a similar warning ("... switching anyway (--force)") and switches (exit code 0). `switch` without a slot number has no such check: its automatic pick skips accounts that are over their maximum (or fully used up). If no other account is left, it prints a message and exits with code 1 instead of switching (v0.1.3 and earlier could still pick such a slot).
+
+```bash
+limitpilot --demo --lang en limits 1 --cap 30
+limitpilot --demo --lang en switch 1
+echo "exit $?"
+limitpilot --demo --lang en switch
+echo "exit $?"
+limitpilot --demo --lang en cap 1 70
+```
+```text
+[2026-11-10 09:20:33] Slot 1 (work@example.com) weekly cap 30%
+Slot 1: session threshold 80% · weekly threshold 30%(default) · weekly max 30%
+[2026-11-10 09:20:33] Slot 1 is over its weekly max (41% >= 30%) - not switching. Raise it with `cap 1 <pct>`, or use `switch 1 --force` (auto-switch may move away again on the next check)
+exit 3
+[2026-11-10 09:20:33] Every other account is at its limit or over its weekly max — nothing to switch to. Name a slot (`switch <slot>`) to pick one anyway
+exit 1
+[2026-11-10 09:20:33] Slot 1 (work@example.com) weekly cap 70%
+```
+
+![switch refused: slot 1 is over its 30% weekly max, exit code 3](docs/images/06-switch-over-cap.png)
+
+_Figure: `switch 1` to a slot over its weekly max warns and stops with exit code 3._
 
 ### Step 4 — Add a new account and keep-alive calls (practice mode notes)
 
@@ -219,7 +243,7 @@ Error: <폴더>/partial.env is missing ANTHROPIC_MODEL, ANTHROPIC_AUTH_TOKEN - a
 limitpilot --demo --lang en doctor
 ```
 ```text
-ok    limitpilot 0.1.3 — Python 3.15.2 on darwin
+ok    limitpilot 0.2.0 — Python 3.15.2 on darwin
 ok    credential store — fake
 ok    ~/.claude.json — oauthAccount found
 ok    daemon not installed — `limitpilot install-daemon` turns on watching
@@ -242,6 +266,8 @@ Dashboard started: http://127.0.0.1:8748/ (DEMO - practice mock mode)
 Open the printed address in a browser to see, with fake data, the account cards (threshold, weekly maximum, status badge), the auto-switch on/off control, and the add-account panel. The dashboard opens only on `127.0.0.1` and uses a new API token every time it runs. If you run it without `--no-open`, practice mode does not open a browser itself; it prints `Practice mode: open http://127.0.0.1:8748/ in your browser yourself ...` and keeps serving. Press Ctrl+C to stop.
 
 The menu bar widget (macOS) is built and installed on your own PC with `limitpilot widget install`, and then opens from a menu bar icon (a gauge plus the active account's usage, such as `42%`). It shows per-account 5-hour and weekly bars and the next candidate. On Windows, the same command builds a tray app.
+
+In the dashboard, the "Switch" button on a slot that is over its weekly max asks for confirmation first ("Over weekly max" / "Switch anyway"); confirming switches anyway, cancelling does nothing. The menu bar widget and the Windows tray call `switch N` without `--force`, so they show the same warning text instead of switching.
 
 (This document does not yet include pictures of the dashboard or widget. The documentation capture environment could not launch a browser and native apps.)
 
@@ -269,7 +295,7 @@ limitpilot dashboard                      # Open the local dashboard
 | `remove` / `enable` / `disable` | Unregister a slot / include it in / exclude it from the auto-switch candidates | `limitpilot disable 3` |
 | `list`, `status` | Show usage and status | `limitpilot list` |
 | `refresh` | Refresh usage immediately | `limitpilot refresh 2` |
-| `switch [slot] [--force]` | Switch (if no slot is given, the account the tool picks) | `limitpilot switch 2` |
+| `switch [slot] [--force]` | Switch (if no slot is given, the account the tool picks). A named slot already over its weekly max is refused (exit 3) unless you add `--force` | `limitpilot switch 2` |
 | `auto [--once] [--dry-run]` | A loop that watches every 60 seconds (foreground, end with Ctrl+C). `--once` runs a single time; `--dry-run` shows the decision without switching | `limitpilot auto --once --dry-run` |
 | `limits slot [--session N --weekly N --cap N]` | Per-account session threshold, weekly threshold, and weekly maximum (revert with `default`) | `limitpilot limits 1 --session 80` |
 | `cap slot N` | Per-account weekly maximum (%) | `limitpilot cap 1 70` |
@@ -283,7 +309,7 @@ limitpilot dashboard                      # Open the local dashboard
 | `purge` | Completely delete the daemon, backups, state, and logs (you must type `PURGE` to proceed) | `limitpilot purge` |
 | `--demo`, `--lang en\|ko` | Practice mode, output language (global options, placed before the command) | `limitpilot --demo tour` |
 
-Exit codes: 0 success / switched · 1 error · 2 nothing to do (below threshold in `auto --once`) · 3 cannot switch · 4 deletion in progress. Invalid input gets a one-line explanation of how to fix it.
+Exit codes: 0 success / switched · 1 error · 2 nothing to do (below threshold in `auto --once`) · 3 cannot switch (including a slot over its weekly max) · 4 deletion in progress. Invalid input gets a one-line explanation of how to fix it.
 
 ```bash
 limitpilot --demo --lang en config threshold abc
@@ -413,11 +439,18 @@ Active slot: 2 · 3 account(s) · threshold 90% · priority expiring · auto-swi
 ## Security notes
 
 - **Token location**: On macOS, the keychain (service `limitpilot`); on Windows, the files `~/.limitpilot/slots/slot-N.json` under the user profile. Tokens do not appear in `state.json`, logs, or the dashboard screen.
-- **Windows slot files are not encrypted.** They are protected only by the user profile folder permissions (ACL), the same level of protection as Claude Code's own `%USERPROFILE%\.claude\.credentials.json` ([Claude Code docs, Credential management](https://code.claude.com/docs/en/iam), checked 2026-11-10). DPAPI encryption is an item to consider for 0.2.0.
+- **Windows slot files are not encrypted.** They are protected only by the user profile folder permissions (ACL), the same level of protection as Claude Code's own `%USERPROFILE%\.claude\.credentials.json` ([Claude Code docs, Credential management](https://code.claude.com/docs/en/iam), checked 2026-11-10). DPAPI encryption is not implemented yet.
 - **`gateway.local.env`** holds the gateway token. It is in this repository's `.gitignore`, but do not commit or share it when you keep it elsewhere either.
 - **`gateway-key`** (a hidden command not shown in help; an `apiKeyHelper` for third-party gateways) prints the API key to standard output as is. If you run it directly in a terminal, the key stays on the screen and in scrollback and may be exposed through shell history, screen sharing, or log collection, so do not run it by hand.
 - **The dashboard** opens only on `127.0.0.1` and creates a new API token each run and injects it into the page. Requests with a mismatched token, Host, or Origin are rejected. Do not leave the dashboard on in an environment where other user accounts share the same PC.
 - **Delete everything**: `limitpilot purge` completely deletes the continuous-watch registration, the account backups (keychain items and slot files), and the settings, state, and logs. You must type `PURGE` to proceed, and it keeps your current Claude Code login and Claude settings and history.
+
+## Known limitations
+
+- Pressing Ctrl+C in the dashboard may print a `KeyboardInterrupt` traceback while it shuts down; the dashboard still stops.
+- Pointing `LIMITPILOT_DEMO_ROOT` at a folder you created beforehand (even an empty one) fails with a traceback. Use a path that does not exist yet.
+- The Korean warning always uses the particle "은" after the slot number (for example "슬롯 2은"), which is wrong for some numbers.
+- In practice mode, usage values are re-read from the scenario after a manual switch, so other slots' usage can appear to change.
 
 ## Notes on use
 

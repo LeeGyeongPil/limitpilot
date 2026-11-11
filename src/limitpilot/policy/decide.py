@@ -139,8 +139,10 @@ def best_candidate(st: dict, active, usages: dict = None):
     없을 때의 차선. 후보 없으면 None."""
     known, unknown, scores, ranks, _ = collect_candidates(
         st, active, usages, time.time(), snapshot_fallback=True)
-    if known:
-        return pick_candidate(known, scores, ranks)[1]
+    # 소진·주간 최대치 도달(정규화 100%) 슬롯은 후보가 아니다 — decide() 의 alive 와 같은 기준
+    alive = [(p, n) for p, n in known if p < 100.0]
+    if alive:
+        return pick_candidate(alive, scores, ranks)[1]
     return unknown[0] if unknown else None
 
 

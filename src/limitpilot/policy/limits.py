@@ -381,3 +381,24 @@ def weekly_cap_reached(s, usage) -> bool:
     sd = usage.get("seven_day") if isinstance(usage, dict) else None
     return (cap < WEEKLY_CAP_MAX and isinstance(sd, dict)
             and isinstance(sd.get("pct"), (int, float)) and sd["pct"] >= cap)
+
+
+def manual_switch_over_cap(st: dict, s, now: float = None):
+    """Return ``(pct, cap)`` when a manual switch to slot ``s`` targets a slot that already
+    reached its weekly max, else ``None``.
+
+    Uses only the last stored usage snapshot (no new fetch). Anything undecidable —
+    no data, a stale window, manual-only slots, or the final-burn window where the cap is
+    lifted — returns ``None`` so the switch proceeds as before."""
+    if not isinstance(s, dict) or is_manual_only_slot(s):
+        return None
+    usage = s.get("usage")
+    if not isinstance(usage, dict) or not weekly_cap_reached(s, usage):
+        return None
+    now = time.time() if now is None else now
+    sd = usage["seven_day"]
+    if sd.get("resets_at") and weekly_reset_epoch(usage, now) is None:
+        return None  # window already rolled over — the stored percentage is stale
+    if slot_limits(st, s, usage, now)["finalBurn"]:
+        return None
+    return float(sd["pct"]), weekly_cap(s)

@@ -364,6 +364,13 @@ def cmd_switch(args) -> int:
             if not ts.get("enabled", True) and not force and not limits.is_manual_only_slot(ts):
                 logutil.log(t("switch_slot_off", n=target))
                 return EXIT_ERROR
+            over = limits.manual_switch_over_cap(st, ts)
+            if over is not None:
+                over_msg = t("switch_over_cap_forced" if force else "switch_over_cap",
+                             n=target, pct=over[0], cap=over[1])
+                logutil.log(over_msg)
+                if not force:
+                    return EXIT_BLOCKED
         if target is None:
             active = st.get("activeSlot")
             if active is None:
@@ -371,7 +378,9 @@ def cmd_switch(args) -> int:
                 return EXIT_ERROR
             target = decide.best_candidate(st, active)
             if target is None:
-                logutil.log(t("switch_no_candidate"))
+                exhausted = decide.collect_candidates(st, active, None, time.time(),
+                                                      snapshot_fallback=True)[0]
+                logutil.log(t("switch_all_exhausted" if exhausted else "switch_no_candidate"))
                 return EXIT_ERROR
         gateway_transition = (limits.is_gateway_slot(state.slot_of(st, target))
                               or st.get("gatewayRestore") is not None)

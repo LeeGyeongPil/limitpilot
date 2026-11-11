@@ -4,6 +4,26 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] - 2026-11-12
+
+### Added
+
+- `switch N` now warns and stops (exit code 3) when slot N already reached its weekly max (`cap` below 100).
+  `switch N --force` switches anyway and prints the same warning. The dashboard "Switch" button answers with
+  HTTP 409 `over_cap` and asks "Switch anyway" before retrying. The dashboard also asks when the live login is
+  unmanaged or unverified (new optional request field `overCapOk`). Messages are in English and Korean.
+- `switch` without a slot number prints a dedicated message (exit code 1) when every other account is used up or over
+  its weekly max.
+
+### Changed
+
+- Scripts that switch by hand to a slot over its weekly max now need `--force`. Auto-switch, slots without a cap, slots without usage data and enterprise/gateway slots behave as before.
+
+### Fixed
+
+- `switch` without a slot number could pick a slot that was over its weekly max (or fully used up) when it was the only
+  account with known usage; such slots are no longer candidates, matching auto-switch. (Present in 0.1.3 and earlier.)
+
 ## [0.1.3] - 2026-11-11
 
 ### Changed
@@ -46,5 +66,5 @@ All notable changes to this project are documented here. The format follows
 
 ### Known limitations
 
-- `switch` does not yet warn when the target slot is over the configured cap (planned for the next version).
+- `switch` does not yet warn when the target slot is over the configured cap (planned for the next version). Resolved in 0.2.0.
 - With a Korean locale, a few labels (`needs login`, `slot N`, the sandbox summary line, `(active)`) stay in English; full translation is planned for the next version.
