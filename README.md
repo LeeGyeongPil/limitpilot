@@ -1,40 +1,41 @@
 # LimitPilot
 
-**한국어** | [English](README.en.md)
+**English** | [한국어](README.ko.md)
 
-> **English summary**
-> - LimitPilot shows how much of each of *your own* Claude Code subscription accounts' 5-hour and weekly usage is left — in the macOS menu bar, the Windows tray, a local dashboard, or `limitpilot list` — and, only if you opt in, a 60-second watcher switches to another of your accounts before the active one hits its limit.
-> - Zero runtime dependencies (Python standard library; the menu bar app is compiled on your Mac with the Swift compiler that ships with macOS). Tokens stay in the OS credential store; every switch is written, read back and rolled back on mismatch.
-> - Try it in 30 seconds without touching real credentials: `limitpilot --demo --lang en tour` (practice/mock mode). Install: `uv tool install git+https://github.com/LeeGyeongPil/limitpilot`.
+LimitPilot shows how much of each of *your own* Claude Code subscription accounts' 5-hour and weekly usage is left — in the macOS menu bar, the Windows tray, a local dashboard, or `limitpilot list` — and, only if you opt in, a 60-second watcher switches to another of your accounts before the active one hits its limit.
 
-## 결과 미리보기
+Zero runtime dependencies (Python standard library; the menu bar app is compiled on your Mac with the Swift compiler that ships with macOS). Tokens stay in the OS credential store; every switch is written, read back and rolled back on mismatch.
 
-![연습 모드 투어 출력: 4번의 확인 중 2번째에 슬롯 1에서 슬롯 2로 전환하는 표](docs/images/01-tour.png)
-*연습용 목(mock) 모드 투어. 2번째 확인(tick 2)에서 5시간 사용률 91% 에 닿은 슬롯 1을 슬롯 2로 바꾸고, 다시 로그인이 필요한 슬롯 3은 후보에서 뺍니다. 마지막 줄은 실제 키체인·네트워크·`launchctl` 호출이 0번이었다는 확인입니다.*
+Try it in 30 seconds without touching real credentials: `limitpilot --demo --lang en tour` (practice/mock mode). Install: `uv tool install git+https://github.com/LeeGyeongPil/limitpilot`.
 
-## 한 줄 요약
+## Result preview
 
-**본인 소유의 Claude Code 구독 계정 여러 개의 남은 사용량을 한 화면에 모으고, 원하면 한도에 닿기 전에 다른 계정으로 넘겨 주는 데스크톱 상주 도구입니다.** 기본값은 알림만 보내는 것이고, 한도를 늘리거나 우회하지 않습니다.
+![Practice-mode tour output: a table showing the switch from slot 1 to slot 2 at the 2nd of 4 checks](docs/images/01-tour.png)
+*Practice (mock) mode tour. At the 2nd check (tick 2), slot 1 reaches 91% of its 5-hour usage and is swapped for slot 2, while slot 3, which needs to log in again, is dropped from the candidates. The last line confirms there were 0 real keychain, network, or `launchctl` calls.*
 
-이런 분께:
-- Claude Code 구독 계정이 둘 이상이고, 한 계정이 한도에 닿을 때마다 로그아웃·로그인을 반복하는 분
-- 지금 어느 계정이 얼마나 남았는지 메뉴바·트레이에서 바로 보고 싶은 분
-- 자격증명(로그인 토큰)을 다루는 도구라서 외부 패키지 없이 코드를 직접 읽어 보고 쓰고 싶은 분
+## One-line summary
 
-> 사용 전 [이용 시 주의](#이용-시-주의)와 [보안 메모](#보안-메모)를 읽어 주세요.
+**A desktop resident tool that gathers the remaining usage of several Claude Code subscription accounts you own onto one screen and, if you want, hands over to another account before one hits its limit.** The default is to send notifications only; it neither raises nor bypasses any limit.
 
-## 왜 필요한가
+Who it's for:
+- People with two or more Claude Code subscription accounts who keep logging out and in every time one account hits its limit
+- People who want to see, right in the menu bar or tray, which account has how much left
+- People who want to read the code themselves and use it without external packages, because the tool handles credentials (login tokens)
 
-교통카드를 두세 장 들고 다닌다고 생각해 보세요. 개찰구에서 "잔액 부족" 이 뜰 때마다 지갑을 뒤져 다른 카드를 꺼내야 합니다. 각 카드의 잔액이 지갑 겉면에 늘 보이고, 잔액이 거의 바닥난 카드는 미리 뒤로 빼 두면 그런 일이 줄어듭니다.
+> Before using it, please read [Notes on use](#notes-on-use) and [Security notes](#security-notes).
 
-Claude Code 구독 계정에는 5시간 사용 창과 7일(주간) 사용 창이 있습니다. LimitPilot 은 계정마다 이 두 창의 남은 양을 늘 보이게 하고(지갑 겉면), 원하면 거의 바닥난 계정을 다른 계정으로 바꿔 줍니다(카드 바꿔 넣기). 바꾸는 일은 "로그인 정보를 다른 계정 것으로 바꿔 쓰기" 이므로, 잘못 쓰면 로그인이 꼬일 수 있습니다. 그래서 바꾼 뒤 다시 읽어 확인하고, 다르면 되돌립니다.
+## Why it's needed
 
-## 설치
+Imagine carrying two or three transit cards. Every time the gate says "insufficient balance," you have to dig through your wallet for another card. If each card's balance is always visible on the outside of the wallet, and a nearly empty card is moved to the back in advance, that happens much less.
 
-전제: Python 3.10 이상, macOS 또는 Windows. 메뉴바 앱은 macOS 에 들어 있는 `swiftc`, Windows 트레이는 Windows 에 들어 있는 `csc.exe` 로 내 PC 에서 직접 빌드합니다. 리눅스는 지원 대상이 아니며 CI 에서도 확인하지 않습니다.
+A Claude Code subscription account has a 5-hour usage window and a 7-day (weekly) usage window. LimitPilot keeps the remaining amount of both windows visible for every account (the outside of the wallet) and, if you want, swaps a nearly exhausted account for another one (swapping the card). Swapping means "replacing the login information with another account's," so misuse could tangle your login. That is why, after a swap, it reads the credentials back to verify them and rolls back if they differ.
+
+## Install
+
+Prerequisites: Python 3.10 or later, macOS or Windows. The menu bar app is built on your own PC with `swiftc`, which ships with macOS; the Windows tray app is built with `csc.exe`, which ships with Windows. Linux is not a supported target and is not checked in CI.
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh        # uv 설치(이미 있으면 생략)
+curl -LsSf https://astral.sh/uv/install.sh | sh        # Install uv (skip if you already have it)
 uv tool install git+https://github.com/LeeGyeongPil/limitpilot
 limitpilot --version
 ```
@@ -42,16 +43,16 @@ limitpilot --version
 limitpilot 0.1.3
 ```
 
-설치 없이 저장소에서 바로 실행할 수도 있습니다(이 문서의 명령 앞 `limitpilot` 을 `PYTHONPATH=src python3 -B -m limitpilot` 으로 바꿔 읽으면 됩니다).
+You can also run it straight from the repository without installing (read `limitpilot` at the start of each command in this document as `PYTHONPATH=src python3 -B -m limitpilot`).
 
 ```bash
 git clone https://github.com/LeeGyeongPil/limitpilot && cd limitpilot
 PYTHONPATH=src python3 -B -m limitpilot --version
 ```
 
-## 30초 실행 (연습용 목 모드)
+## 30-second run (practice mock mode)
 
-`--demo` 는 **연습용 목(mock) 모드**입니다. 실제 계정 없이 도구가 어떻게 판단하는지 볼 수 있습니다.
+`--demo` is the **practice mock mode**. It lets you see how the tool decides, without any real accounts.
 
 ```bash
 limitpilot --demo --lang en tour
@@ -69,24 +70,24 @@ Real code paths used: policy.decide.decide, switch.perform_switch (read-back + r
 sandbox: real keychain 0, network 0, launchctl 0
 ```
 
-위 출력은 `[notification]` 알림 줄 2개와 임시 폴더 경로 줄 1개를 빼고 옮겼습니다. 시각은 실행한 때에 따라 달라집니다.
+The output above omits two `[notification]` lines and one line with the temp folder path. Times vary with when you run it.
 
-| | 연습 모드(`--demo`) | 실제 모드 |
+| | Practice mode (`--demo`) | Real mode |
 |---|---|---|
-| 계정 | 가짜 계정 3개(`work`·`personal`·`side`) | 내가 등록한 계정 |
-| 자격증명 저장소 | 임시 폴더의 가짜 저장소 | macOS 키체인 / Windows 사용자 프로필 |
-| 사용량 | 미리 만든 시나리오 파일(`demo/scenario.json`) | Claude 사용량 조회(네트워크) |
-| 시계 | 가상 시계(한 번 확인할 때마다 15분 진행) | 실제 시계, 60초마다 확인 |
-| 그대로 도는 실제 코드 | 전환 결정(`decide`), 전환·다시 읽기·되돌리기(`perform_switch`), 상태 저장 | 같음 |
-| 바깥 호출 | 키체인·네트워크·`launchctl`·브라우저를 막고 횟수만 셈 | 실제로 호출 |
+| Accounts | 3 fake accounts (`work`, `personal`, `side`) | The accounts you registered |
+| Credential store | A fake store in a temp folder | macOS keychain / Windows user profile |
+| Usage | A prepared scenario file (`demo/scenario.json`) | Claude usage lookup (network) |
+| Clock | Virtual clock (advances 15 minutes per check) | Real clock, checked every 60 seconds |
+| Real code that runs as-is | The switch decision (`decide`), switching, read-back and rollback (`perform_switch`), state saving | Same |
+| Outside calls | Keychain, network, `launchctl` and browser are blocked and only counted | Actually called |
 
-실제 모드의 첫 사용량 조회는 네트워크 왕복과 키체인 확인창 때문에 수 초~수십 초 걸릴 수 있습니다. 서버가 429(요청 과다)로 답하면 기다렸다가 다시 시도(백오프)합니다.
+In real mode, the first usage lookup can take a few seconds to tens of seconds because of a network round trip and the keychain prompt. If the server answers 429 (too many requests), it waits and retries (backoff).
 
-## 단계별 따라 하기
+## Step by step
 
-모두 연습 모드로 따라 할 수 있습니다. 앞 단계에서 만든 연습 상태(투어가 끝난 상태: 활성 슬롯 2)를 이어서 씁니다. 연습 상태는 시스템 임시 폴더의 `limitpilot-demo` 폴더에 있고(`LIMITPILOT_DEMO_ROOT` 로 바꿀 수 있음), `tour` 를 다시 실행하면 처음 상태로 돌아갑니다.
+You can follow all of this in practice mode. It continues from the practice state built in the earlier steps (the state after the tour: active slot 2). The practice state lives in the `limitpilot-demo` folder inside the system temp folder (changeable with `LIMITPILOT_DEMO_ROOT`), and running `tour` again resets it to the starting state.
 
-### 1단계 — 계정별 사용량 읽기
+### Step 1 — Read usage per account
 
 ```bash
 limitpilot --demo --lang en list
@@ -98,17 +99,17 @@ Active slot: 2 · 3 account(s) · threshold 90% · priority expiring · auto-swi
   Slot 3: side  [needs login: invalid_grant]
 ```
 
-![list 출력: 슬롯 3개의 5시간·주간 사용률과 리셋 시각](docs/images/02-list.png)
-*`list`: 슬롯마다 5시간(5h)·주간(7d) 사용률과 리셋 시각, 활성 슬롯 표시*
+![list output: 5-hour and weekly usage and reset times for three slots](docs/images/02-list.png)
+*`list`: 5-hour (5h) and weekly (7d) usage and reset time for each slot, with the active slot marked*
 
-무슨 뜻인지:
-- **슬롯**은 계정 하나를 저장해 둔 칸입니다. `(active)` 는 지금 Claude Code 가 쓰는 계정입니다.
-- `5h 91.0%` 는 5시간 사용 창의 91% 를 썼다는 뜻이고, `resets` 는 그 창이 비워지는 시각입니다.
-- `needs login` 은 저장된 토큰을 더는 쓸 수 없어 다시 로그인해야 한다는 뜻입니다. 이 계정은 자동 전환 후보에서 빠집니다.
+What it means:
+- A **slot** is a compartment that stores one account. `(active)` is the account Claude Code is using right now.
+- `5h 91.0%` means 91% of the 5-hour usage window has been used, and `resets` is when that window is cleared.
+- `needs login` means the saved token can no longer be used and you must log in again. That account is dropped from the auto-switch candidates.
 
-### 2단계 — 상시 감시 켜기(연습)
+### Step 2 — Turn on continuous watching (practice)
 
-실제 모드에서는 `install-daemon` 이 OS 스케줄러(macOS launchd, Windows 작업 스케줄러)에 60초 감시를 등록합니다. 기본은 **알려만 주고 전환하지 않는** 모드이고, 자동 전환은 `--enable-auto` 로 따로 동의해야 켜집니다. 연습 모드는 아무것도 등록하지 않고 할 일만 알려 줍니다(종료 코드 0).
+In real mode, `install-daemon` registers a 60-second watcher with the OS scheduler (macOS launchd, Windows Task Scheduler). The default is a mode that **only notifies and does not switch**; auto-switching turns on only when you separately consent with `--enable-auto`. Practice mode registers nothing and just tells you what it would do (exit code 0).
 
 ```bash
 limitpilot --demo --lang en install-daemon --enable-auto
@@ -119,7 +120,7 @@ Practice mode: would register the background watcher with the OS scheduler (noth
 Practice mode: would remove the background watcher from the OS scheduler (nothing was changed)
 ```
 
-감시가 지금 무엇을 할지는 `auto --once --dry-run` 으로 한 번만 확인할 수 있습니다. 종료 코드 2 는 "할 일 없음" 입니다.
+You can check once what the watcher would do right now with `auto --once --dry-run`. Exit code 2 means "nothing to do."
 
 ```bash
 limitpilot --demo --lang en auto --once --dry-run
@@ -128,11 +129,11 @@ limitpilot --demo --lang en auto --once --dry-run
 [2026-11-10 09:22:41] No action: below threshold (session 26%/90% · weekly 32%/90%)
 ```
 
-`session 26%/90%` 는 "활성 계정의 5시간 사용률 26%, 전환 기준(임계) 90%" 라는 뜻입니다.
+`session 26%/90%` means "the active account's 5-hour usage is 26%, and the switch threshold is 90%."
 
-### 3단계 — 계정마다 한도 따로 정하기
+### Step 3 — Set limits per account
 
-전체 임계(`threshold`) 말고 계정마다 세션 임계·주간 임계·주간 최대치를 따로 줄 수 있습니다. **주간 최대치(`--cap`)** 는 "이 계정은 주간 사용률이 이 값을 넘으면 자동 전환 후보로 쓰지 않는다" 는 안전 상한입니다.
+Besides the global threshold (`threshold`), you can give each account its own session threshold, weekly threshold, and weekly maximum. The **weekly maximum (`--cap`)** is a safety ceiling meaning "if this account's weekly usage exceeds this value, do not use it as an auto-switch candidate."
 
 ```bash
 limitpilot --demo --lang en limits 1 --session 80 --cap 70
@@ -143,7 +144,7 @@ limitpilot --demo --lang en limits 1 --session 80 --cap 70
 Slot 1: session threshold 80% · weekly threshold 70%(default) · weekly max 70%
 ```
 
-이미 등록된 계정을 다시 등록해도(토큰이 만료돼 다시 로그인한 경우 등) 토큰만 바뀌고 별칭과 계정별 한도는 그대로 남습니다. 연습 모드의 `add` 는 지금 활성인 슬롯 2를 다시 등록하므로 `updated` 가 나오고, 다른 슬롯의 한도도 건드리지 않습니다. 같은 슬롯에 한도를 정한 뒤 다시 등록하는 경우는 [직접 바꿔 보기](#직접-바꿔-보기)의 실험 2에서 확인합니다.
+If you register an already-registered account again (for example, after its token expired and you logged in again), only the token changes; the alias and per-account limits stay. Practice-mode `add` re-registers slot 2, which is currently active, so you get `updated`, and the other slots' limits are not touched. For re-registering the same slot after setting its limits, see experiment 2 in [Try changing things](#try-changing-things).
 
 ```bash
 limitpilot --demo --lang en add
@@ -154,11 +155,11 @@ limitpilot --demo --lang en limits 1
 Slot 1: session threshold 80% · weekly threshold 70%(default) · weekly max 70%
 ```
 
-`list` 에도 계정별 한도가 표시됩니다: `Slot 1 [limits session 80·weekly 70·max 70%]: work ...`
+`list` also shows per-account limits: `Slot 1 [limits session 80·weekly 70·max 70%]: work ...`
 
-### 4단계 — 새 계정 추가와 유지 호출(연습 모드 안내)
+### Step 4 — Add a new account and keep-alive calls (practice mode notes)
 
-`login` 은 브라우저로 다른 계정에 로그인해 빈 슬롯에 저장합니다(지금 쓰는 계정은 바뀌지 않음). `keepalive` 는 계정마다 아주 작은 요청 1건을 보내 토큰을 살려 둡니다. 둘 다 바깥으로 나가는 동작이라 연습 모드에서는 무엇을 할지만 알려 주고 끝납니다(종료 코드 0, 연습 상태에 실패 기록 없음).
+`login` signs in to another account in the browser and saves it in an empty slot (the account you are using now does not change). `keepalive` sends one tiny request per account to keep its token alive. Both reach outside your machine, so practice mode only tells you what it would do and ends (exit code 0, no failure recorded in the practice state).
 
 ```bash
 limitpilot --demo --lang en login
@@ -169,11 +170,11 @@ Practice mode: would run `claude auth login` in an isolated folder and save the 
 Practice mode: would send one minimal request per account (max_tokens=1) for slot(s) 1, 2 (nothing was sent)
 ```
 
-### 5단계 — 서드파티 게이트웨이를 수동 전용 슬롯으로 등록
+### Step 5 — Register a third-party gateway as a manual-only slot
 
-Anthropic 호환 게이트웨이(직접 운영하는 프록시 등)를 슬롯으로 등록하면 `switch` 로 직접 고를 때만 씁니다. 사용량 창이 없으므로 자동 전환 후보에는 들어가지 않습니다.
+If you register an Anthropic-compatible gateway (such as a proxy you run yourself) as a slot, it is used only when you pick it directly with `switch`. It has no usage window, so it never becomes an auto-switch candidate.
 
-`gateway-add` 는 **현재 폴더의 `gateway.local.env`** 를 읽습니다. 다른 파일은 `--env-file <경로>` 로 지정합니다. 형식은 한 줄에 `KEY=VALUE` 하나입니다(아래 값은 자리표시자).
+`gateway-add` reads **`gateway.local.env` in the current folder**. Point to another file with `--env-file <path>`. The format is one `KEY=VALUE` per line (the values below are placeholders).
 
 ```dotenv
 # gateway.example.env
@@ -183,14 +184,14 @@ ANTHROPIC_AUTH_TOKEN=replace-me
 GATEWAY_ALIAS=my-gateway
 ```
 
-| 키 | 필수 | 뜻 |
+| Key | Required | Meaning |
 |---|---|---|
-| `ANTHROPIC_BASE_URL` | 예 | 게이트웨이 주소. `https://` 만 받고, 주소 안에 아이디·비밀번호를 넣으면 거부합니다 |
-| `ANTHROPIC_MODEL` | 예 | 그 게이트웨이에서 쓸 모델 이름 |
-| `ANTHROPIC_AUTH_TOKEN` | 예(기본 방식) | Bearer 토큰. 게이트웨이가 `x-api-key` 방식이면 대신 `GATEWAY_AUTH_MODE=api-key` 와 `ANTHROPIC_API_KEY=<키>` 두 줄을 씁니다 |
-| `GATEWAY_ALIAS` | 아니요 | 목록에 보일 이름(없으면 모델 이름) |
+| `ANTHROPIC_BASE_URL` | Yes | Gateway address. Only `https://` is accepted, and an address containing a username or password is rejected |
+| `ANTHROPIC_MODEL` | Yes | Model name to use on that gateway |
+| `ANTHROPIC_AUTH_TOKEN` | Yes (default mode) | Bearer token. If the gateway uses the `x-api-key` style, write the two lines `GATEWAY_AUTH_MODE=api-key` and `ANTHROPIC_API_KEY=<key>` instead |
+| `GATEWAY_ALIAS` | No | Name shown in the list (the model name if absent) |
 
-`#` 로 시작하는 줄은 주석으로 건너뜁니다. 값 뒤에 붙인 주석은 값의 일부가 되니 쓰지 마세요. 기본 파일 이름인 `gateway.local.env` 는 이 저장소의 `.gitignore` 에 들어 있습니다. 토큰이 담기니 커밋·공유하지 마세요.
+Lines starting with `#` are skipped as comments. A comment placed after a value becomes part of the value, so don't write one. The default file name `gateway.local.env` is in this repository's `.gitignore`. It holds a token, so do not commit or share it.
 
 ```bash
 limitpilot --demo --lang en gateway-add --env-file gateway.example.env
@@ -205,14 +206,14 @@ Active slot: 2 · 4 account(s) · threshold 90% · priority expiring · auto-swi
   Slot 4: my-gateway  third-party gateway · example-model · https://gateway.example.com · manual only
 ```
 
-파일이 없거나 키가 빠지면 무엇을 고칠지 알려 줍니다. 키 값은 오류에 찍히지 않습니다(경로의 `<폴더>` 는 실제로는 현재 폴더).
+If the file is missing or a key is absent, it tells you what to fix. Key values are never printed in the error (`<폴더>` in the path is actually the current folder; it means "folder").
 
 ```text
 Error: The gateway env file <폴더>/gateway.local.env does not exist. Create it with KEY=VALUE lines: ANTHROPIC_BASE_URL=https://<gateway>, ANTHROPIC_MODEL=<model>, ANTHROPIC_AUTH_TOKEN=<token> (or GATEWAY_AUTH_MODE=api-key with ANTHROPIC_API_KEY=<key>), optional GATEWAY_ALIAS=<name>. Or point to another file with --env-file <path>.
 Error: <폴더>/partial.env is missing ANTHROPIC_MODEL, ANTHROPIC_AUTH_TOKEN - add them as KEY=VALUE lines (ANTHROPIC_BASE_URL must be an https URL)
 ```
 
-### 6단계 — 환경 점검
+### Step 6 — Check the environment
 
 ```bash
 limitpilot --demo --lang en doctor
@@ -226,10 +227,10 @@ ok    activity log — 624 bytes (cap 4194304)
 ok    dashboard port 8748 — free
 ```
 
-![doctor 출력: 여섯 항목이 모두 ok](docs/images/05-doctor.png)
-*`doctor`: 설치·자격증명 저장소·Claude Code 로그인 파일·데몬·로그·대시보드 포트를 한 줄씩 점검. 연습 모드에서는 저장소가 `fake` 로 표시됩니다(Python 버전과 로그 크기는 환경마다 다름)*
+![doctor output: all six items ok](docs/images/05-doctor.png)
+*`doctor`: checks the install, credential store, Claude Code login file, daemon, log, and dashboard port, one line each. In practice mode the store shows as `fake` (the Python version and log size vary by environment)*
 
-### 7단계 — 대시보드와 메뉴바 위젯
+### Step 7 — Dashboard and menu bar widget
 
 ```bash
 limitpilot --demo --lang en dashboard --no-open
@@ -238,51 +239,51 @@ limitpilot --demo --lang en dashboard --no-open
 Dashboard started: http://127.0.0.1:8748/ (DEMO - practice mock mode)
 ```
 
-출력된 주소를 브라우저로 열면 가짜 데이터로 계정 카드(임계·주간 최대치·상태 배지), 자동 전환 켜기·끄기, 계정 추가 패널을 볼 수 있습니다. 대시보드는 `127.0.0.1` 에서만 열리고 실행할 때마다 새 API 토큰을 씁니다. `--no-open` 없이 실행하면 연습 모드에서는 브라우저를 직접 열지 않고 `Practice mode: open http://127.0.0.1:8748/ in your browser yourself ...` 라고 안내한 뒤 계속 서비스합니다. 끝내려면 Ctrl+C 를 누릅니다.
+Open the printed address in a browser to see, with fake data, the account cards (threshold, weekly maximum, status badge), the auto-switch on/off control, and the add-account panel. The dashboard opens only on `127.0.0.1` and uses a new API token every time it runs. If you run it without `--no-open`, practice mode does not open a browser itself; it prints `Practice mode: open http://127.0.0.1:8748/ in your browser yourself ...` and keeps serving. Press Ctrl+C to stop.
 
-메뉴바 위젯(macOS)은 `limitpilot widget install` 로 내 PC 에서 빌드·설치한 뒤 메뉴바 아이콘(게이지 + `42%` 같은 활성 계정 사용률)으로 엽니다. 계정별 5시간·주간 막대와 다음 후보를 보여 줍니다. Windows 는 같은 명령이 트레이 앱을 만듭니다.
+The menu bar widget (macOS) is built and installed on your own PC with `limitpilot widget install`, and then opens from a menu bar icon (a gauge plus the active account's usage, such as `42%`). It shows per-account 5-hour and weekly bars and the next candidate. On Windows, the same command builds a tray app.
 
-(대시보드·위젯 화면 그림은 이 문서에 아직 없습니다. 문서용 촬영 환경에서 브라우저와 네이티브 앱을 띄울 수 없었습니다.)
+(This document does not yet include pictures of the dashboard or widget. The documentation capture environment could not launch a browser and native apps.)
 
-### 실제 계정으로 시작하기
+### Getting started with real accounts
 
 ```bash
-limitpilot add                            # 지금 Claude Code 에 로그인된 계정을 슬롯에 등록
-limitpilot login                          # 브라우저로 다른 계정 추가(활성 계정은 그대로)
-limitpilot list                           # 계정별 사용량 보기
-limitpilot install-daemon                 # 60초마다 확인, 알림만
-limitpilot install-daemon --enable-auto   # 자동 전환까지 명시적으로 동의
-limitpilot widget install                 # 메뉴바(트레이) 앱 빌드·설치
-limitpilot dashboard                      # 로컬 대시보드 열기
+limitpilot add                            # Register the account currently logged in to Claude Code in a slot
+limitpilot login                          # Add another account via the browser (the active account stays)
+limitpilot list                           # View usage per account
+limitpilot install-daemon                 # Check every 60 seconds, notify only
+limitpilot install-daemon --enable-auto   # Explicitly consent to auto-switching too
+limitpilot widget install                 # Build and install the menu bar (tray) app
+limitpilot dashboard                      # Open the local dashboard
 ```
 
-> `add`·`login`·`install-daemon`·`widget install`·`dashboard`·`migrate`(실모드)는 실제 PC(키체인·launchd·작업 스케줄러·로그인 항목·브라우저)를 건드립니다. 이 문서의 출력은 연습 모드와 읽기 전용 명령으로만 확인했고, 위 명령의 실제 모드 출력은 옮기지 않았습니다.
+> `add`, `login`, `install-daemon`, `widget install`, `dashboard`, and `migrate` (real mode) touch the real PC (keychain, launchd, Task Scheduler, login items, browser). The output in this document was checked only with practice mode and read-only commands, and the real-mode output of the commands above is not reproduced here.
 
-## 사용법
+## Usage
 
-| 명령·옵션 | 하는 일 | 예 |
+| Command / option | What it does | Example |
 |---|---|---|
-| `add` | 현재 로그인된 활성 계정을 슬롯에 등록. 이미 있는 계정이면 토큰만 갱신하고 별칭·계정별 한도는 유지 | `limitpilot add` |
-| `login [--alias 이름]` | 브라우저로 새 계정 추가(활성 무변경). 이미 있는 계정이면 갱신 | `limitpilot login` |
-| `gateway-add [--env-file 경로] [--alias 이름]` | env 파일([5단계](#5단계--서드파티-게이트웨이를-수동-전용-슬롯으로-등록))의 게이트웨이를 수동 전용 슬롯에 등록 | `limitpilot gateway-add` |
-| `remove` / `enable` / `disable` | 슬롯 등록 해제 / 자동 전환 후보에 넣기 / 빼기 | `limitpilot disable 3` |
-| `list`, `status` | 사용량·상태 표시 | `limitpilot list` |
-| `refresh` | 사용량 즉시 새로고침 | `limitpilot refresh 2` |
-| `switch [슬롯] [--force]` | 전환(슬롯 생략 시 도구가 고른 계정) | `limitpilot switch 2` |
-| `auto [--once] [--dry-run]` | 60초마다 감시하는 루프(포그라운드, Ctrl+C 로 끝). `--once` 는 1회만, `--dry-run` 은 결정만 보여 주고 전환하지 않음 | `limitpilot auto --once --dry-run` |
-| `limits 슬롯 [--session N --weekly N --cap N]` | 계정별 세션 임계·주간 임계·주간 최대치(`default` 로 되돌림) | `limitpilot limits 1 --session 80` |
-| `cap 슬롯 N` | 계정별 주간 최대치(%) | `limitpilot cap 1 70` |
-| `keepalive` | 유지 호출 즉시 실행 | `limitpilot keepalive` |
-| `config [키 [값]]` | 설정 조회·변경 | `limitpilot config auto-switch on` |
-| `install-daemon [--enable-auto]` / `uninstall-daemon` | 상시 감시 등록·해제 | `limitpilot install-daemon` |
-| `dashboard [--port N] [--no-open] [--add]` | 로컬 대시보드 | `limitpilot dashboard --no-open` |
-| `widget build\|install\|uninstall [--out DIR] [--dry-run]` | 메뉴바(트레이) 앱 | `limitpilot widget build --out ./build` |
-| `migrate [--dry-run]` | claude-account-pilot 데이터 옮기기 | `limitpilot migrate --dry-run` |
-| `doctor` | 환경 점검 | `limitpilot doctor` |
-| `purge` | 데몬·백업·상태·로그 완전 삭제(`PURGE` 를 입력해야 진행) | `limitpilot purge` |
-| `--demo`, `--lang en\|ko` | 연습 모드, 출력 언어(전역 옵션, 명령 앞에 둠) | `limitpilot --demo tour` |
+| `add` | Register the currently logged-in active account in a slot. If the account already exists, only the token is refreshed and the alias and per-account limits are kept | `limitpilot add` |
+| `login [--alias name]` | Add a new account via the browser (active account unchanged). Refreshes it if it already exists | `limitpilot login` |
+| `gateway-add [--env-file path] [--alias name]` | Register the gateway from the env file ([Step 5](#step-5--register-a-third-party-gateway-as-a-manual-only-slot)) in a manual-only slot | `limitpilot gateway-add` |
+| `remove` / `enable` / `disable` | Unregister a slot / include it in / exclude it from the auto-switch candidates | `limitpilot disable 3` |
+| `list`, `status` | Show usage and status | `limitpilot list` |
+| `refresh` | Refresh usage immediately | `limitpilot refresh 2` |
+| `switch [slot] [--force]` | Switch (if no slot is given, the account the tool picks) | `limitpilot switch 2` |
+| `auto [--once] [--dry-run]` | A loop that watches every 60 seconds (foreground, end with Ctrl+C). `--once` runs a single time; `--dry-run` shows the decision without switching | `limitpilot auto --once --dry-run` |
+| `limits slot [--session N --weekly N --cap N]` | Per-account session threshold, weekly threshold, and weekly maximum (revert with `default`) | `limitpilot limits 1 --session 80` |
+| `cap slot N` | Per-account weekly maximum (%) | `limitpilot cap 1 70` |
+| `keepalive` | Run the keep-alive call immediately | `limitpilot keepalive` |
+| `config [key [value]]` | View or change settings | `limitpilot config auto-switch on` |
+| `install-daemon [--enable-auto]` / `uninstall-daemon` | Register / remove continuous watching | `limitpilot install-daemon` |
+| `dashboard [--port N] [--no-open] [--add]` | Local dashboard | `limitpilot dashboard --no-open` |
+| `widget build\|install\|uninstall [--out DIR] [--dry-run]` | Menu bar (tray) app | `limitpilot widget build --out ./build` |
+| `migrate [--dry-run]` | Move data from claude-account-pilot | `limitpilot migrate --dry-run` |
+| `doctor` | Environment check | `limitpilot doctor` |
+| `purge` | Completely delete the daemon, backups, state, and logs (you must type `PURGE` to proceed) | `limitpilot purge` |
+| `--demo`, `--lang en\|ko` | Practice mode, output language (global options, placed before the command) | `limitpilot --demo tour` |
 
-종료 코드: 0 성공·전환함 · 1 오류 · 2 할 일 없음(`auto --once` 에서 임계 미만) · 3 전환할 수 없음 · 4 삭제 진행 중. 잘못된 입력은 고칠 방법을 한 줄로 알려 줍니다.
+Exit codes: 0 success / switched · 1 error · 2 nothing to do (below threshold in `auto --once`) · 3 cannot switch · 4 deletion in progress. Invalid input gets a one-line explanation of how to fix it.
 
 ```bash
 limitpilot --demo --lang en config threshold abc
@@ -293,9 +294,9 @@ limitpilot --demo --lang en remove 99
 [2026-11-10 09:20:32] Error: Slot 99 is not registered
 ```
 
-`--lang en`·`--lang ko` 는 파이썬 패키지의 거의 모든 출력(명령 출력·`doctor`·`migrate --dry-run`·`widget --dry-run`·로그·알림·오류·대시보드 응답)에 적용됩니다. 지정하지 않으면 OS 로케일을 따릅니다(예: `limitpilot gateway-add --help` 는 한국어 로케일에서 한국어 도움말). 예외는 Windows 트레이(`tray.cs`·`tray.ps1`)의 고정 한국어 문구, `migrate --purge-legacy`·실제 `migrate` 실행 출력·실제 `widget build` 메시지, `widget install`·`uninstall` 실제 실행 메시지, 옛 데이터가 없을 때 `migrate --dry-run` 의 `nothing to migrate` 줄, argparse 기본 문구(`usage`·`options`·오류 메시지)(모두 영어로 남습니다), 그리고 이미 기록된 `state.json`·`limitpilot.log` 의 옛 줄입니다.
+`--lang en` and `--lang ko` apply to almost all output of the Python package (command output, `doctor`, `migrate --dry-run`, `widget --dry-run`, logs, notifications, errors, dashboard responses). If not specified, the OS locale is followed (for example, `limitpilot gateway-add --help` shows Korean help under a Korean locale). The exceptions are the fixed Korean strings of the Windows tray (`tray.cs`, `tray.ps1`); the output of `migrate --purge-legacy`, a real `migrate` run, real `widget build` messages, and real `widget install` / `uninstall` messages; the `nothing to migrate` line of `migrate --dry-run` when no old data exists; and argparse's default text (`usage`, `options`, error messages) (all of these stay in English); as well as old lines already recorded in `state.json` and `limitpilot.log`.
 
-## 설정
+## Settings
 
 ```bash
 limitpilot --demo --lang en config
@@ -310,88 +311,88 @@ final-burn       = off  (use accounts up to 100% 5 h before weekly / 30 min befo
 priority         = expiring  (expiring: weekly reset soonest first | balanced: lowest usage first)
 ```
 
-![config 출력: 일곱 가지 설정과 현재 값](docs/images/03-config.png)
-*`config`: 연습 모드 화면. `auto-switch` 는 연습 모드가 투어를 위해 켠 값이고, 실제 설치의 기본값은 `off`*
+![config output: seven settings and their current values](docs/images/03-config.png)
+*`config`: the practice-mode screen. `auto-switch` is a value practice mode turned on for the tour; the default for a real install is `off`*
 
-| 키 | 기본값(실제 설치) | 하는 일 |
+| Key | Default (real install) | What it does |
 |---|---|---|
-| `threshold` | 90% | 세션(5시간) 사용률이 이 값에 닿으면 전환 후보를 찾는다(50~99) |
-| `weekly-threshold` | 세션 임계를 따름 | 주간 사용률 임계 |
-| `auto-switch` | **off** | 켜면 데몬이 스스로 전환, 끄면 알림만 |
-| `keepalive` | **off** | 켜면 계정당 하루 1회 최소 요청을 보내 토큰을 살려 둔다. 이 요청은 사용량에 잡힌다 |
-| `final-burn` | **off** | 켜면 리셋 직전(주간 5시간 전·세션 30분 전)에 그 계정을 100%까지 쓴다 |
-| `priority` | `expiring` | `expiring`: 주간 리셋이 가장 가까운 계정 우선, `balanced`: 사용률이 가장 낮은 계정 우선 |
-| `language` | OS 로케일(없으면 en) | 위젯·대시보드 언어 `en\|ko` |
+| `threshold` | 90% | When session (5-hour) usage reaches this value, look for a switch candidate (50~99) |
+| `weekly-threshold` | Follows the session threshold | Weekly usage threshold |
+| `auto-switch` | **off** | When on, the daemon switches by itself; when off, it only notifies |
+| `keepalive` | **off** | When on, sends one minimal request per account per day to keep the token alive. This request counts as usage |
+| `final-burn` | **off** | When on, uses that account up to 100% just before its reset (5 hours before the weekly reset, 30 minutes before the session reset) |
+| `priority` | `expiring` | `expiring`: prefer the account whose weekly reset is soonest; `balanced`: prefer the account with the lowest usage |
+| `language` | OS locale (en if none) | Widget and dashboard language `en\|ko` |
 
-환경변수(모두 선택): `LIMITPILOT_HOME`(상태 폴더, 기본 `~/.limitpilot`), `LIMITPILOT_PORT`(대시보드 포트, 기본 8748), `LIMITPILOT_LANG`(en|ko), `LIMITPILOT_SANDBOX=1`(실제 키체인·launchctl·schtasks·외부 HTTP 호출을 막고 횟수를 센다). API 키는 필요 없습니다.
+Environment variables (all optional): `LIMITPILOT_HOME` (state folder, default `~/.limitpilot`), `LIMITPILOT_PORT` (dashboard port, default 8748), `LIMITPILOT_LANG` (en|ko), `LIMITPILOT_SANDBOX=1` (blocks real keychain, launchctl, schtasks, and external HTTP calls and counts them). No API key is needed.
 
-## 동작 원리
+## How it works
 
 ```mermaid
 flowchart LR
-    D["감시 데몬<br/>60초마다"] --> U["사용량 조회"]
-    U --> P["결정 policy.decide"]
-    P -->|"임계 도달 + 옵트인"| S["전환 perform_switch<br/>쓰기 → 다시 읽기 → 실패 시 되돌리기"]
-    P -->|"옵트인 아님"| N["알림만"]
-    S --> K[("OS 자격증명 저장소<br/>키체인 / 사용자 프로필")]
-    U --> ST["state.json<br/>토큰 없음"]
-    ST --> W["메뉴바·트레이 위젯"]
-    ST --> B["로컬 대시보드<br/>127.0.0.1 + 실행별 토큰"]
+    D["Watch daemon<br/>every 60 s"] --> U["Fetch usage"]
+    U --> P["Decide policy.decide"]
+    P -->|"Threshold reached + opt-in"| S["Switch perform_switch<br/>write → read back → roll back on failure"]
+    P -->|"Not opted in"| N["Notify only"]
+    S --> K[("OS credential store<br/>keychain / user profile")]
+    U --> ST["state.json<br/>no tokens"]
+    ST --> W["Menu bar / tray widget"]
+    ST --> B["Local dashboard<br/>127.0.0.1 + per-run token"]
 ```
 
-1. **감시 데몬**: OS 스케줄러(launchd 또는 작업 스케줄러)가 60초마다 `limitpilot.pyz`(데몬 전용으로 묶은 파일 하나짜리 사본)를 실행합니다.
-2. **사용량 조회**: 계정마다 5시간·주간 사용률과 리셋 시각을 가져옵니다.
-3. **결정**: 정책 코드가 임계·계정별 한도·주간 최대치·리셋 임박도로 "그대로 둘지, 누구로 바꿀지" 를 정합니다.
-4. **전환 또는 알림**: 자동 전환이 켜져 있으면 활성 자격증명을 바꿔 쓰고 다시 읽어 확인하며, 다르면 되돌립니다. 꺼져 있으면 알림만 보냅니다.
-5. **토큰은 한곳에만**: 토큰은 키체인(macOS) 또는 사용자 프로필 파일(Windows)에만 있습니다. 위젯·대시보드가 읽는 `state.json` 에는 사용량 숫자만 있고 토큰이 없습니다.
-6. **대시보드 보호**: `127.0.0.1` 에서만 열리고, 실행마다 바뀌는 토큰과 Host·Origin 검사를 통과한 요청만 받습니다.
+1. **Watch daemon**: The OS scheduler (launchd or Task Scheduler) runs `limitpilot.pyz` (a single-file copy bundled just for the daemon) every 60 seconds.
+2. **Fetch usage**: For each account, it gets the 5-hour and weekly usage and the reset times.
+3. **Decide**: The policy code decides "leave it as is, or switch to whom" from the threshold, per-account limits, weekly maximum, and how soon the reset is.
+4. **Switch or notify**: If auto-switching is on, it overwrites the active credentials, reads them back to verify, and rolls back if they differ. If it is off, it only sends a notification.
+5. **Tokens in one place only**: Tokens exist only in the keychain (macOS) or a user-profile file (Windows). The `state.json` read by the widget and dashboard has only usage numbers and no tokens.
+6. **Dashboard protection**: It opens only on `127.0.0.1` and accepts only requests that pass the per-run token and the Host and Origin checks.
 
-Claude Code 의 자격증명 저장 형식이 바뀌면 동작이 깨질 수 있습니다. 이상하면 `limitpilot doctor` 를 먼저 실행하세요.
+If Claude Code's credential storage format changes, behavior may break. If something looks off, run `limitpilot doctor` first.
 
-## 코드 둘러보기
+## Code tour
 
-| 파일 | 볼 곳 | 무엇을 배우나 |
+| File | Where to look | What you learn |
 |---|---|---|
-| `src/limitpilot/policy/decide.py` | `decide()` | 한 번의 확인에서 "그대로/전환/막힘" 을 정하는 순서. 관리 밖 계정·만료 토큰·수동 전용 슬롯은 건드리지 않고, 사용량을 모르면 몇 번 더 지켜본 뒤에만 움직입니다 |
-| `src/limitpilot/switch.py` | `perform_switch()` | 자격증명 교체의 안전 절차: 잠금 → 지금 토큰을 자기 슬롯에 되백업 → 대상 토큰 쓰기 → 다시 읽어 비교 → 다르면 `rollback_active()` |
-| `src/limitpilot/accounts.py` | `USER_SLOT_KEYS`, `_keep_user_settings()` | 같은 계정을 다시 등록할 때 사용자가 정한 별칭·임계·주간 최대치를 옮겨 담는 곳. 안전 상한이 조용히 풀리지 않게 합니다 |
+| `src/limitpilot/policy/decide.py` | `decide()` | The order in which a single check decides "stay / switch / blocked." It does not touch unmanaged accounts, expired tokens, or manual-only slots, and when usage is unknown it moves only after watching a few more times |
+| `src/limitpilot/switch.py` | `perform_switch()` | The safe procedure for swapping credentials: lock → back up the current token into its own slot → write the target token → read back and compare → `rollback_active()` if different |
+| `src/limitpilot/accounts.py` | `USER_SLOT_KEYS`, `_keep_user_settings()` | Where the user-set alias, thresholds, and weekly maximum are carried over when the same account is registered again. It keeps safety ceilings from being silently lifted |
 
-연습 모드가 무엇을 가짜로 바꾸는지는 `src/limitpilot/demo/__init__.py`(가짜 저장소·시나리오 응답)와 `src/limitpilot/sandbox.py`(바깥 호출 차단·횟수 세기)에서 볼 수 있습니다.
+What practice mode fakes can be seen in `src/limitpilot/demo/__init__.py` (the fake store and scenario responses) and `src/limitpilot/sandbox.py` (blocking and counting outside calls).
 
-## 용어 사전
+## Glossary
 
-| 용어 | 뜻 |
+| Term | Meaning |
 |---|---|
-| 슬롯 | 계정 하나의 자격증명과 설정을 담아 두는 번호 붙은 칸 |
-| 활성 계정 | 지금 Claude Code 가 쓰고 있는 계정 |
-| 5시간 창 / 주간 창 | 사용량이 집계되는 기간. 각 창은 정해진 시각에 비워짐(`resets`) |
-| 임계(threshold) | 활성 계정 사용률이 이 값에 닿으면 전환을 검토하는 기준 |
-| 주간 최대치(cap) | 이 계정의 주간 사용률이 이 값을 넘으면 자동 전환 후보에서 빼는 안전 상한 |
-| 옵트인 | 사용자가 명시적으로 켜야만 동작하는 방식(자동 전환·유지 호출·리셋 전 소진) |
-| 유지 호출(keepalive) | 토큰을 살려 두려고 계정마다 하루 1번 보내는 아주 작은 요청. 사용량에 잡힘 |
-| 리셋 전 소진(final-burn) | 창이 곧 비워질 계정을 리셋 직전에 100%까지 쓰는 옵션 |
-| 자격증명 저장소 | OS 가 비밀 값을 보관하는 곳. macOS 키체인, Windows 는 사용자 프로필 폴더 |
-| 다시 읽기·되돌리기 | 자격증명을 쓴 뒤 다시 읽어 같은지 확인하고, 다르면 이전 값으로 복구하는 절차 |
-| 게이트웨이 슬롯 | Anthropic 호환 서드파티 주소를 쓰는 슬롯. 수동 전환 전용 |
-| 연습용 목(mock) 모드 | `--demo`. 가짜 계정·가상 시계·가짜 저장소로 실제 코드 경로를 돌려 보는 모드 |
+| Slot | A numbered compartment that holds one account's credentials and settings |
+| Active account | The account Claude Code is using right now |
+| 5-hour window / weekly window | The periods over which usage is counted. Each window is cleared at a fixed time (`resets`) |
+| Threshold | The value at which the active account's usage triggers a switch review |
+| Weekly maximum (cap) | A safety ceiling: if this account's weekly usage exceeds this value, it is dropped from the auto-switch candidates |
+| Opt-in | Works only when the user explicitly turns it on (auto-switch, keep-alive, burn before reset) |
+| Keep-alive call (keepalive) | A tiny request sent once a day per account to keep the token alive. It counts as usage |
+| Burn before reset (final-burn) | An option that uses an account whose window is about to clear up to 100% just before the reset |
+| Credential store | Where the OS keeps secret values. The macOS keychain; on Windows, the user profile folder |
+| Read-back and rollback | After writing credentials, read them back to check they match, and restore the previous value if they don't |
+| Gateway slot | A slot that uses a third-party Anthropic-compatible address. Manual switching only |
+| Practice mock mode | `--demo`. A mode that runs the real code paths with fake accounts, a virtual clock, and a fake store |
 
-## 직접 바꿔 보기
+## Try changing things
 
-각 실험은 먼저 `limitpilot --demo --lang en tour` 를 실행해 연습 상태를 처음으로 돌린 뒤(투어가 연습 상태를 새로 만듦) 시작합니다.
+Start each experiment by running `limitpilot --demo --lang en tour` to reset the practice state to the beginning (the tour creates the practice state anew).
 
-**실험 1 — 전체 임계 낮추기**
-- 바꿀 곳: `limitpilot --demo --lang en config threshold 60`
-- 예상 결과: 판단 기준이 90% 에서 60% 로 바뀝니다. 활성 슬롯 2는 26% 라 아직 전환하지 않습니다.
-- 확인 방법: `limitpilot --demo --lang en auto --once --dry-run`
+**Experiment 1 — Lower the global threshold**
+- What to change: `limitpilot --demo --lang en config threshold 60`
+- Expected result: The decision threshold changes from 90% to 60%. Active slot 2 is at 26%, so it still does not switch.
+- How to check: `limitpilot --demo --lang en auto --once --dry-run`
 
 ```text
 [2026-11-10 09:22:41] No action: below threshold (session 26%/60% · weekly 32%/60%)
 ```
 
-**실험 2 — 계정별 임계가 전체 임계를 이기는지, 다시 등록해도 남는지**
-- 바꿀 곳: `limitpilot --demo --lang en limits 2 --session 80 --weekly 70`
-- 예상 결과: 슬롯 2의 판단 기준이 세션 80%·주간 70% 로 바뀌고, `add` 로 다시 등록해도 그대로입니다.
-- 확인 방법: `auto --once --dry-run` → `add` → `limits 2`
+**Experiment 2 — Does a per-account threshold beat the global one, and does it survive re-registering?**
+- What to change: `limitpilot --demo --lang en limits 2 --session 80 --weekly 70`
+- Expected result: Slot 2's decision thresholds become session 80% and weekly 70%, and they stay even after re-registering with `add`.
+- How to check: `auto --once --dry-run` → `add` → `limits 2`
 
 ```text
 [2026-11-10 09:22:42] No action: below threshold (session 26%/80% · weekly 32%/70%)
@@ -399,34 +400,34 @@ Claude Code 의 자격증명 저장 형식이 바뀌면 동작이 깨질 수 있
 Slot 2: session threshold 80% · weekly threshold 70% · weekly max 100%
 ```
 
-**실험 3 — 자동 전환 끄기(알림만)**
-- 바꿀 곳: `limitpilot --demo --lang en config auto-switch off`
-- 예상 결과: 첫 줄의 `auto-switch` 가 `off` 로 바뀝니다. 이 상태의 데몬은 임계를 넘어도 알림만 보냅니다(실제 설치의 기본값).
-- 확인 방법: `limitpilot --demo --lang en list`
+**Experiment 3 — Turn off auto-switching (notify only)**
+- What to change: `limitpilot --demo --lang en config auto-switch off`
+- Expected result: `auto-switch` in the first line becomes `off`. In this state the daemon only sends notifications even when a threshold is exceeded (the default for a real install).
+- How to check: `limitpilot --demo --lang en list`
 
 ```text
 [2026-11-10 09:22:18] Setting updated: autoSwitch = False
 Active slot: 2 · 3 account(s) · threshold 90% · priority expiring · auto-switch off · keep-alive off
 ```
 
-## 보안 메모
+## Security notes
 
-- **토큰 위치**: macOS 는 키체인(서비스 `limitpilot`), Windows 는 사용자 프로필 아래 `~/.limitpilot/slots/slot-N.json` 파일입니다. `state.json`·로그·대시보드 화면에는 토큰이 들어가지 않습니다.
-- **Windows 슬롯 파일은 암호화하지 않습니다.** 사용자 프로필 폴더 권한(ACL)으로만 보호되며, Claude Code 자신의 `%USERPROFILE%\.claude\.credentials.json` 과 같은 보호 수준입니다([Claude Code 문서 Credential management](https://code.claude.com/docs/en/iam), 2026-11-10 확인). DPAPI 암호화는 0.2.0 에서 검토할 항목입니다.
-- **`gateway.local.env`** 에는 게이트웨이 토큰이 들어갑니다. 이 저장소의 `.gitignore` 에 들어 있지만, 다른 곳에 둘 때도 커밋·공유하지 마세요.
-- **`gateway-key`**(도움말에 나오지 않는 숨김 명령, 서드파티 게이트웨이용 `apiKeyHelper`)는 API 키를 표준 출력으로 그대로 내보냅니다. 터미널에서 직접 실행하면 키가 화면과 스크롤백에 남고, 셸 기록·화면 공유·로그 수집에 노출될 수 있으니 사람이 직접 실행하지 마세요.
-- **대시보드**는 `127.0.0.1` 에서만 열리고, 실행할 때마다 새 API 토큰을 만들어 페이지에 주입합니다. 토큰·Host·Origin 이 맞지 않는 요청은 거부합니다. 같은 PC 의 다른 사용자 계정이 있는 환경에서는 대시보드를 켜 두지 마세요.
-- **전부 지우기**: `limitpilot purge` 는 상시 감시 등록, 계정 백업(키체인 항목·슬롯 파일), 설정·상태·로그를 완전히 삭제합니다. `PURGE` 를 입력해야 진행하며, 현재 Claude Code 로그인과 Claude 설정·기록은 남깁니다.
+- **Token location**: On macOS, the keychain (service `limitpilot`); on Windows, the files `~/.limitpilot/slots/slot-N.json` under the user profile. Tokens do not appear in `state.json`, logs, or the dashboard screen.
+- **Windows slot files are not encrypted.** They are protected only by the user profile folder permissions (ACL), the same level of protection as Claude Code's own `%USERPROFILE%\.claude\.credentials.json` ([Claude Code docs, Credential management](https://code.claude.com/docs/en/iam), checked 2026-11-10). DPAPI encryption is an item to consider for 0.2.0.
+- **`gateway.local.env`** holds the gateway token. It is in this repository's `.gitignore`, but do not commit or share it when you keep it elsewhere either.
+- **`gateway-key`** (a hidden command not shown in help; an `apiKeyHelper` for third-party gateways) prints the API key to standard output as is. If you run it directly in a terminal, the key stays on the screen and in scrollback and may be exposed through shell history, screen sharing, or log collection, so do not run it by hand.
+- **The dashboard** opens only on `127.0.0.1` and creates a new API token each run and injects it into the page. Requests with a mismatched token, Host, or Origin are rejected. Do not leave the dashboard on in an environment where other user accounts share the same PC.
+- **Delete everything**: `limitpilot purge` completely deletes the continuous-watch registration, the account backups (keychain items and slot files), and the settings, state, and logs. You must type `PURGE` to proceed, and it keeps your current Claude Code login and Claude settings and history.
 
-## 이용 시 주의
+## Notes on use
 
-- 각 계정의 이용 약관·요금제 조건을 지키며 **본인 소유 계정**에만 쓰세요. 이 도구는 사용량을 보여 주고 전환을 편하게 할 뿐, 한도를 늘리지 않습니다.
-- `keepalive` 와 `final-burn` 은 사용량에 잡히는 요청을 보내므로 기본으로 꺼져 있습니다. 켜기 전에 [설정](#설정) 표를 확인하세요.
-- Claude Code 의 저장 형식이 바뀌면 동작이 깨질 수 있습니다. 이상하면 `limitpilot doctor` 를 먼저 실행하세요.
+- Follow each account's terms of service and plan conditions, and use this only with **accounts you own**. This tool shows usage and makes switching convenient; it does not raise any limit.
+- `keepalive` and `final-burn` send requests that count as usage, so they are off by default. Check the [Settings](#settings) table before turning them on.
+- If Claude Code's storage format changes, behavior may break. If something looks off, run `limitpilot doctor` first.
 
-## 이전 도구에서 옮기기
+## Migrating from the previous tool
 
-작성자의 이전 개인 프로젝트 claude-account-pilot 을 쓰던 PC 라면 한 번 옮깁니다. 먼저 아무것도 바꾸지 않고 순서를 봅니다(연습 모드 출력).
+If your PC used the author's earlier personal project, claude-account-pilot, migrate once. First, look at the sequence without changing anything (practice-mode output).
 
 ```bash
 limitpilot --demo --lang en migrate --dry-run
@@ -443,41 +444,41 @@ migrate --dry-run (nothing will be changed):
   note: .../state/state.json already exists — a real run stops before step 1
 ```
 
-![migrate dry-run 출력: 옮기기 7단계 계획](docs/images/04-migrate-dry-run.png)
-*`migrate --dry-run`: 예전 데몬을 먼저 멈추고, 복사 후 다시 읽어 확인한 다음에야 예전 항목을 지운다*
+![migrate dry-run output: the 7-step migration plan](docs/images/04-migrate-dry-run.png)
+*`migrate --dry-run`: stop the old daemon first, copy and read back to verify, and only then delete the old items*
 
-마지막 `note:` 줄은 연습 모드가 새 상태 폴더를 미리 만들어 두므로 항상 나옵니다. 실제 PC 에 limitpilot 상태가 이미 있으면 `migrate` 는 1단계 전에 멈춥니다. (경로는 `...` 로 줄였습니다.) 자세한 단계는 [docs/migrating.md](docs/migrating.md).
+The final `note:` line always appears because practice mode creates a new state folder in advance. If limitpilot state already exists on a real PC, `migrate` stops before step 1. (Paths are shortened to `...`.) For the detailed steps, see [docs/migrating.md](docs/migrating.md) (Korean).
 
-## 언제 쓰나
+## When to use it
 
-- 외부 패키지 없이 표준 라이브러리만으로 된 코드를 직접 읽고 고쳐 쓰고 싶을 때.
-- macOS 메뉴바·Windows 트레이에서 계정별 남은 양을 보고, 옵트인 자동 전환을 쓰고 싶을 때.
-- 터미널 TUI 를 원하면 [realiti4/claude-swap](https://github.com/realiti4/claude-swap) 도 살펴보세요.
+- When you want to read, and modify, code built on the standard library alone, with no external packages.
+- When you want to see each account's remaining usage in the macOS menu bar or Windows tray and use opt-in auto-switching.
+- If you want a terminal TUI, also take a look at [realiti4/claude-swap](https://github.com/realiti4/claude-swap).
 
-## 자주 겪는 문제
+## Troubleshooting
 
-| 증상 | 원인 | 해결 |
+| Symptom | Cause | Fix |
 |---|---|---|
-| 계정이 `needs login` 으로 표시 | 저장된 토큰 갱신이 실패(`invalid_grant`) | `limitpilot login` 으로 그 계정에 다시 로그인(지금 Claude Code 에 로그인된 계정이면 Claude Code 에서 다시 로그인한 뒤 `limitpilot add`). 같은 계정이면 `Slot N updated: ... alias and per-account limits kept` 가 나오고 별칭·임계·주간 최대치는 그대로 남습니다 |
-| 임계를 넘었는데 전환하지 않음 | 기본값이 `auto-switch off`(알림만) | `limitpilot config auto-switch on` 또는 `install-daemon --enable-auto` |
-| `gateway-add` 가 `... gateway.local.env does not exist` | 현재 폴더에 env 파일이 없음 | [5단계](#5단계--서드파티-게이트웨이를-수동-전용-슬롯으로-등록) 형식으로 파일을 만들거나 `--env-file <경로>` |
-| `gateway-add` 가 `... is missing ANTHROPIC_MODEL ...` | env 파일에 필수 키가 빠짐 | 오류에 나온 키를 `KEY=VALUE` 줄로 추가(`ANTHROPIC_BASE_URL` 은 https) |
-| `dashboard` 포트가 사용 중 | 8748 을 다른 프로세스가 사용 | `limitpilot dashboard --port 8800` 또는 `LIMITPILOT_PORT` |
-| 연습 모드에서 `install-daemon`·`login`·`keepalive` 가 `Practice mode: would ...` 만 출력 | 연습 모드는 OS 스케줄러·`claude`·네트워크를 부르지 않는다 | 실제 동작은 `--demo` 없이 실행 |
-| 연습 모드 대시보드가 브라우저를 열지 않음 | 연습 모드는 다른 프로그램을 띄우지 않는다 | 안내된 `http://127.0.0.1:<포트>/` 를 직접 열기 |
-| `Error: Blocked in practice mode: ...` | 연습 모드가 실제 키체인·네트워크·시스템 명령을 막음 | 실제 동작이 필요하면 `--demo` 없이 실행 |
-| `limitpilot auto` 가 "The watcher is stopped" 안내 후 끝남 | `uninstall-daemon` 으로 감시를 멈춰 둔 상태 | `limitpilot install-daemon` 으로 다시 켜기 |
-| 예상 못 한 오류 한 줄(`... limitpilot doctor ...`) | 환경 문제 | `limitpilot doctor`, 상세 트레이스백은 `LIMITPILOT_DEBUG=1` 로 실행 |
-| 예전 도구 데몬 경고 | 예전 데몬과 같은 자격증명을 두고 경쟁 | `limitpilot migrate`, 예전 메뉴바 앱은 직접 종료 |
+| An account shows as `needs login` | Refreshing the saved token failed (`invalid_grant`) | Log in to that account again with `limitpilot login` (if it is the account currently logged in to Claude Code, log in again in Claude Code and then run `limitpilot add`). For the same account you get `Slot N updated: ... alias and per-account limits kept`, and the alias, thresholds, and weekly maximum stay as they were |
+| It does not switch even though the threshold was exceeded | The default is `auto-switch off` (notify only) | `limitpilot config auto-switch on` or `install-daemon --enable-auto` |
+| `gateway-add` says `... gateway.local.env does not exist` | There is no env file in the current folder | Create the file in the [Step 5](#step-5--register-a-third-party-gateway-as-a-manual-only-slot) format, or use `--env-file <path>` |
+| `gateway-add` says `... is missing ANTHROPIC_MODEL ...` | A required key is missing from the env file | Add the key named in the error as a `KEY=VALUE` line (`ANTHROPIC_BASE_URL` must be https) |
+| The `dashboard` port is in use | Another process is using 8748 | `limitpilot dashboard --port 8800` or `LIMITPILOT_PORT` |
+| In practice mode, `install-daemon`, `login`, and `keepalive` print only `Practice mode: would ...` | Practice mode does not call the OS scheduler, `claude`, or the network | Run without `--demo` for the real action |
+| The practice-mode dashboard does not open a browser | Practice mode does not launch other programs | Open the printed `http://127.0.0.1:<port>/` yourself |
+| `Error: Blocked in practice mode: ...` | Practice mode blocks the real keychain, network, and system commands | Run without `--demo` if you need the real action |
+| `limitpilot auto` prints "The watcher is stopped" and ends | Watching was stopped with `uninstall-daemon` | Turn it back on with `limitpilot install-daemon` |
+| An unexpected one-line error (`... limitpilot doctor ...`) | An environment problem | Run `limitpilot doctor`; for a detailed traceback, run with `LIMITPILOT_DEBUG=1` |
+| Old tool daemon warning | The old daemon is competing for the same credentials | `limitpilot migrate`; quit the old menu bar app yourself |
 
-## 더 알아보기
+## Learn more
 
-- [Claude Code 문서 — Identity and Access Management(Credential management)](https://code.claude.com/docs/en/iam): Claude Code 가 자격증명을 어디에 저장하는지(2026-11-10 확인)
-- [realiti4/claude-swap](https://github.com/realiti4/claude-swap): 같은 문제를 TUI 로 푸는 도구(2026-11-10 확인)
-- 비슷한 다른 도구(2026-11-10 확인): [Leuconoe/ClaudeCodeMultiAccounts](https://github.com/Leuconoe/ClaudeCodeMultiAccounts), [Dicklesworthstone/coding_agent_account_manager](https://github.com/Dicklesworthstone/coding_agent_account_manager), [claude-code-tools/claude-code-account-switcher](https://github.com/claude-code-tools/claude-code-account-switcher)
-- 이 저장소 문서: [옮기기 상세](docs/migrating.md), [성능 수치](docs/performance.md), [릴리스 절차](docs/releasing.md)
+- [Claude Code docs — Identity and Access Management (Credential management)](https://code.claude.com/docs/en/iam): where Claude Code stores credentials (checked 2026-11-10)
+- [realiti4/claude-swap](https://github.com/realiti4/claude-swap): a tool that solves the same problem with a TUI (checked 2026-11-10)
+- Other similar tools (checked 2026-11-10): [Leuconoe/ClaudeCodeMultiAccounts](https://github.com/Leuconoe/ClaudeCodeMultiAccounts), [Dicklesworthstone/coding_agent_account_manager](https://github.com/Dicklesworthstone/coding_agent_account_manager), [claude-code-tools/claude-code-account-switcher](https://github.com/claude-code-tools/claude-code-account-switcher)
+- Documents in this repository: [Migration details](docs/migrating.md) (Korean), [Performance figures](docs/performance.md) (Korean), [Release procedure](docs/releasing.md) (Korean)
 
-## 개발·기여
+## Development and contributing
 
 ```bash
 uv run --no-project python -B -m unittest discover -s tests -t .
@@ -487,8 +488,8 @@ Ran ... tests in ...s
 OK (skipped=2)
 ```
 
-테스트 개수와 시간은 버전마다 달라지므로 `...` 로 적었습니다. `OK (skipped=…)` 줄이 나오면 통과입니다(그 뒤에 테스트가 찍는 안내 줄이 몇 개 더 붙을 수 있습니다). `skipped=2` 는 의사 터미널(PTY)을 만들 수 없는 환경에서 브라우저 로그인 테스트 2개를 건너뛴 것이고, PTY 를 쓸 수 있으면 건너뛰는 테스트 없이 `OK` 만 나옵니다. 테스트는 실제 키체인·`launchctl`·외부 소켓 호출을 막는 전역 가드 아래에서 돕니다. 아이콘은 `scripts/build_icons.py`, 성능 수치는 `scripts/bench.py`(결과는 [docs/performance.md](docs/performance.md)), 릴리스 절차는 [docs/releasing.md](docs/releasing.md)에 있습니다. 커밋 제목은 Conventional Commits 를 따릅니다. 취약점은 [SECURITY.md](SECURITY.md)를 보세요. 버그·제안은 이슈로 남겨 주세요. 변경 기록은 [CHANGELOG.md](CHANGELOG.md).
+The number of tests and the time change from version to version, so they are written as `...`. If you see an `OK (skipped=…)` line, it passed (a few more informational lines printed by the tests may follow). `skipped=2` means 2 browser-login tests were skipped in an environment that cannot create a pseudo-terminal (PTY); where a PTY is available, no tests are skipped and you get just `OK`. Tests run under a global guard that blocks real keychain, `launchctl`, and external socket calls. Icons are built with `scripts/build_icons.py`, performance figures come from `scripts/bench.py` (results in [docs/performance.md](docs/performance.md)), and the release procedure is in [docs/releasing.md](docs/releasing.md). Commit titles follow Conventional Commits. For vulnerabilities, see [SECURITY.md](SECURITY.md). Please leave bugs and suggestions as issues. The change log is [CHANGELOG.md](CHANGELOG.md).
 
-## 라이선스
+## License
 
-MIT. 런타임 의존성이 없어 따로 들어간 서드파티 코드는 없습니다.
+MIT. There is no runtime dependency, so no third-party code is bundled.
