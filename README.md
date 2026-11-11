@@ -1,5 +1,7 @@
 # LimitPilot
 
+**한국어** | [English](README.en.md)
+
 > **English summary**
 > - LimitPilot shows how much of each of *your own* Claude Code subscription accounts' 5-hour and weekly usage is left — in the macOS menu bar, the Windows tray, a local dashboard, or `limitpilot list` — and, only if you opt in, a 60-second watcher switches to another of your accounts before the active one hits its limit.
 > - Zero runtime dependencies (Python standard library; the menu bar app is compiled on your Mac with the Swift compiler that ships with macOS). Tokens stay in the OS credential store; every switch is written, read back and rolled back on mismatch.
