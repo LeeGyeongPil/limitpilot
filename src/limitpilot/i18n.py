@@ -241,6 +241,8 @@ _PAIRS = {
                              "주기와 무관하게 대상 계정 전체"),
     "help_list": ("show usage and state of every account", "등록 계정의 사용량/상태 표시"),
     "help_status": ("same as list", "list 와 동일"),
+    "help_json": ("print one JSON document (stable keys, no tokens) instead of text",
+                  "사람용 출력 대신 JSON 문서 1개 출력(고정된 키, 토큰 없음)"),
     "help_switch": ("switch account (best candidate when the slot is omitted)",
                     "계정 전환(슬롯 생략 시 가장 알맞은 계정으로)"),
     "help_switch_force": ("allow OFF / needs-login / over-weekly-max slots or overwrite an unregistered login",

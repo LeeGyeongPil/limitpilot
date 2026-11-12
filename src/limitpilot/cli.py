@@ -6,6 +6,8 @@ that need them, so the 60-second daemon tick starts quickly.
 """
 
 import argparse
+import contextlib
+import json
 import os
 import sys
 import time
@@ -201,9 +203,82 @@ def _slot_detail(st, s, u) -> str:
     return t("detail_unknown")
 
 
+JSON_SCHEMA_VERSION = 1
+
+
+def _slot_kind(s) -> str:
+    if s.get("kind") == "setup-token":
+        return "setup-token"
+    if limits.is_gateway_slot(s):
+        return "gateway"
+    if limits.is_enterprise_slot(s):
+        return "enterprise"
+    return "oauth"
+
+
+def _usage_window(w):
+    """``{"pct", "resetsAt"}`` from a stored usage window, or None. No localised formatting."""
+    if not isinstance(w, dict) or not isinstance(w.get("pct"), (int, float)):
+        return None
+    return {"pct": float(w["pct"]), "resetsAt": w.get("resets_at")}
+
+
+def _slot_status(s, u) -> str:
+    """Stable status code; mirrors the branches of ``_slot_detail`` (not translated)."""
+    if s.get("kind") == "setup-token" or limits.is_gateway_slot(s):
+        return "unknown"
+    if s.get("quarantine"):
+        return "quarantined"
+    if u == TOKEN_EXPIRED:
+        return "token-expired"
+    if isinstance(u, dict) or isinstance(s.get("usage"), dict):
+        uu = u if isinstance(u, dict) else s["usage"]
+        if limits.is_enterprise_slot(s) and uu.get("spend"):
+            return "ok" if isinstance(u, dict) else "snapshot"
+        if uu.get("five_hour") and uu.get("seven_day"):
+            return "ok" if isinstance(u, dict) else "snapshot"
+        return "partial"
+    return "unknown"
+
+
+def _list_document(st, usages) -> dict:
+    """Machine-readable list/status document (public contract, see README)."""
+    active = st.get("activeSlot")
+    slots = []
+    for n in state.registered_slots(st):
+        s = state.slot_of(st, n)
+        u = usages.get(n)
+        uu = u if isinstance(u, dict) else (s.get("usage") if isinstance(s.get("usage"), dict) else {})
+        slots.append({
+            "slot": n,
+            "label": state.slot_label(s, n),
+            "active": n == active,
+            "enabled": bool(s.get("enabled", True)),
+            "kind": _slot_kind(s),
+            "status": _slot_status(s, u),
+            "fiveHour": _usage_window(uu.get("five_hour")),
+            "sevenDay": _usage_window(uu.get("seven_day")),
+        })
+    return {"schemaVersion": JSON_SCHEMA_VERSION, "version": APP_VERSION,
+            "activeSlot": active if isinstance(active, int) else None, "slots": slots}
+
+
+def _json_error(code: str, message) -> None:
+    """One-line error document on stdout (stderr keeps the human error line)."""
+    print(json.dumps({"schemaVersion": JSON_SCHEMA_VERSION,
+                      "error": {"code": code, "message": str(message)}}, ensure_ascii=False))
+
+
 def cmd_list(args) -> int:
     _migrate_banner()
     # 네트워크 조회는 상태 락 밖에서 — 데몬·대시보드가 그동안 기다리지 않는다
+    if getattr(args, "json", False):
+        # stdout must carry the JSON document only: anything printed while collecting
+        # (e.g. practice-mode notifications) goes to stderr instead
+        with contextlib.redirect_stdout(sys.stderr):
+            st, usages = collector.collect_and_merge(allow_refresh=True)
+        print(json.dumps(_list_document(st, usages), ensure_ascii=False))
+        return 0
     st, usages = collector.collect_and_merge(allow_refresh=True)
     active = st.get("activeSlot")
     regs = state.registered_slots(st)
@@ -628,8 +703,10 @@ def build_parser() -> argparse.ArgumentParser:
     ka.add_argument("slot", type=int, nargs="?")
     ka.add_argument("--force", action="store_true", help=h("help_keepalive_force"))
     sub.add_parser("sync-daemon")        # 숨김(위젯·트레이·대시보드가 시작할 때 실행)
-    sub.add_parser("list", help=h("help_list"))
-    sub.add_parser("status", help=h("help_status"))
+    ls = sub.add_parser("list", help=h("help_list"))
+    ls.add_argument("--json", action="store_true", help=h("help_json"))
+    stt = sub.add_parser("status", help=h("help_status"))
+    stt.add_argument("--json", action="store_true", help=h("help_json"))
     sw = sub.add_parser("switch", help=h("help_switch"))
     sw.add_argument("slot", type=int, nargs="?")
     sw.add_argument("--force", action="store_true", help=h("help_switch_force"))
@@ -690,6 +767,7 @@ def main(argv=None) -> int:
     if args.cmd is None:
         parser.print_help()
         return EXIT_ERROR
+    want_json = bool(getattr(args, "json", False))
     if args.demo or args.cmd == "tour":
         # 연습 모드: 임시 폴더의 가짜 저장소·가짜 Claude Code 파일·가상 사용량을 쓴다
         from limitpilot import demo
@@ -697,6 +775,8 @@ def main(argv=None) -> int:
         demo.activate(fresh=args.fresh)
     elif sys.platform not in ("darwin", "win32") and args.cmd not in ("doctor", "widget"):
         logutil.log(t("unsupported_platform"))
+        if want_json:
+            _json_error("unsupported-platform", t("unsupported_platform"))
         return EXIT_ERROR
     if args.cmd not in ("purge", "uninstall-daemon", "gateway-key", "tour", "migrate") \
             and not args.demo:
@@ -725,13 +805,19 @@ def main(argv=None) -> int:
                 print(t("purge_partial"), file=sys.stderr)
         else:
             logutil.error(t("error_prefix", msg=e))
+        if want_json:
+            _json_error("error", e)
         return EXIT_ERROR
     except sandbox.SandboxViolation as e:
         print(t("error_prefix", msg=t("sandbox_blocked", detail=e)), file=sys.stderr)
+        if want_json:
+            _json_error("sandbox", t("sandbox_blocked", detail=e))
         return EXIT_ERROR
     except Exception as e:  # noqa: BLE001 - 최후 방어선: 트레이스백 대신 한 줄
         if os.environ.get("LIMITPILOT_DEBUG") == "1":
             raise
         print(t("error_prefix", msg=t("unexpected_error", err=f"{type(e).__name__}: {e}")),
               file=sys.stderr)
+        if want_json:
+            _json_error("unexpected", t("unexpected_error", err=f"{type(e).__name__}: {e}"))
         return EXIT_ERROR
