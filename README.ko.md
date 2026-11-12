@@ -526,6 +526,7 @@ migrate --dry-run (nothing will be changed):
 | `gateway-add` 가 `... gateway.local.env does not exist` | 현재 폴더에 env 파일이 없음 | [5단계](#5단계--서드파티-게이트웨이를-수동-전용-슬롯으로-등록) 형식으로 파일을 만들거나 `--env-file <경로>` |
 | `gateway-add` 가 `... is missing ANTHROPIC_MODEL ...` | env 파일에 필수 키가 빠짐 | 오류에 나온 키를 `KEY=VALUE` 줄로 추가(`ANTHROPIC_BASE_URL` 은 https) |
 | `dashboard` 포트가 사용 중 | 8748 을 다른 프로세스가 사용 | `limitpilot dashboard --port 8800` 또는 `LIMITPILOT_PORT` |
+| 대시보드 언어가 다르게 보이거나 `Already running` 이 출력됨 | 먼저 띄운 대시보드가 아직 실행 중이라 그 대시보드의 언어(시작할 때 정해진 값)가 그대로 쓰임 | 그 대시보드를 멈추거나(Ctrl+C) `--port` 로 다른 포트에 새로 띄웁니다 |
 | 연습 모드에서 `install-daemon`·`login`·`keepalive` 가 `Practice mode: would ...` 만 출력 | 연습 모드는 OS 스케줄러·`claude`·네트워크를 부르지 않는다 | 실제 동작은 `--demo` 없이 실행 |
 | 연습 모드 대시보드가 브라우저를 열지 않음 | 연습 모드는 다른 프로그램을 띄우지 않는다 | 안내된 `http://127.0.0.1:<포트>/` 를 직접 열기 |
 | `Error: Blocked in practice mode: ...` | 연습 모드가 실제 키체인·네트워크·시스템 명령을 막음 | 실제 동작이 필요하면 `--demo` 없이 실행 |

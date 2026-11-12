@@ -530,6 +530,7 @@ The final `note:` line always appears because practice mode creates a new state 
 | `gateway-add` says `... gateway.local.env does not exist` | There is no env file in the current folder | Create the file in the [Step 5](#step-5--register-a-third-party-gateway-as-a-manual-only-slot) format, or use `--env-file <path>` |
 | `gateway-add` says `... is missing ANTHROPIC_MODEL ...` | A required key is missing from the env file | Add the key named in the error as a `KEY=VALUE` line (`ANTHROPIC_BASE_URL` must be https) |
 | The `dashboard` port is in use | Another process is using 8748 | `limitpilot dashboard --port 8800` or `LIMITPILOT_PORT` |
+| The dashboard shows the wrong language, or `Already running` is printed | A dashboard started earlier is still running, and its language (set when it started) is reused as is | Stop that dashboard (Ctrl+C), or start a new one on another port with `--port` |
 | In practice mode, `install-daemon`, `login`, and `keepalive` print only `Practice mode: would ...` | Practice mode does not call the OS scheduler, `claude`, or the network | Run without `--demo` for the real action |
 | The practice-mode dashboard does not open a browser | Practice mode does not launch other programs | Open the printed `http://127.0.0.1:<port>/` yourself |
 | `Error: Blocked in practice mode: ...` | Practice mode blocks the real keychain, network, and system commands | Run without `--demo` if you need the real action |
