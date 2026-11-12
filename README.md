@@ -40,7 +40,7 @@ uv tool install git+https://github.com/LeeGyeongPil/limitpilot
 limitpilot --version
 ```
 ```text
-limitpilot 0.3.0
+limitpilot 0.3.1
 ```
 
 You can also run it straight from the repository without installing (read `limitpilot` at the start of each command in this document as `PYTHONPATH=src python3 -B -m limitpilot`).
@@ -243,7 +243,7 @@ Error: <폴더>/partial.env is missing ANTHROPIC_MODEL, ANTHROPIC_AUTH_TOKEN - a
 limitpilot --demo --lang en doctor
 ```
 ```text
-ok    limitpilot 0.3.0 — Python 3.15.2 on darwin
+ok    limitpilot 0.3.1 — Python 3.15.2 on darwin
 ok    credential store — fake
 ok    ~/.claude.json — oauthAccount found
 ok    daemon not installed — `limitpilot install-daemon` turns on watching
@@ -263,7 +263,7 @@ limitpilot --demo --lang en dashboard --no-open
 Dashboard started: http://127.0.0.1:8748/ (DEMO - practice mock mode)
 ```
 
-Open the printed address in a browser to see, with fake data, the account cards (threshold, weekly maximum, status badge), the auto-switch on/off control, and the add-account panel. The dashboard opens only on `127.0.0.1` and uses a new API token every time it runs. If you run it without `--no-open`, practice mode does not open a browser itself; it prints `Practice mode: open http://127.0.0.1:8748/ in your browser yourself ...` and keeps serving. Press Ctrl+C to stop.
+Open the printed address in a browser to see, with fake data, the account cards (threshold, weekly maximum, status badge), the auto-switch on/off control, and the add-account panel. The dashboard opens only on `127.0.0.1` and uses a new API token every time it runs. If you run it without `--no-open`, practice mode does not open a browser itself; it prints `Practice mode: open http://127.0.0.1:8748/ in your browser yourself ...` and keeps serving. Press Ctrl+C to stop. The dashboard shows the configured language from its very first paint (saved `language` setting, then `--lang` / `LIMITPILOT_LANG`, then the OS locale, otherwise English).
 
 The menu bar widget (macOS) is built and installed on your own PC with `limitpilot widget install`, and then opens from a menu bar icon (a gauge plus the active account's usage, such as `42%`). It shows per-account 5-hour and weekly bars and the next candidate. On Windows, the same command builds a tray app.
 
@@ -280,7 +280,7 @@ limitpilot --demo --lang en list --json
 ```
 
 ```json
-{"schemaVersion": 1, "version": "0.3.0", "activeSlot": 1, "slots": [
+{"schemaVersion": 1, "version": "0.3.1", "activeSlot": 1, "slots": [
   {"slot": 1, "label": "work", "active": true, "enabled": true, "kind": "oauth", "status": "ok",
    "fiveHour": {"pct": 62.0, "resetsAt": "2026-11-12T06:45:22.583089Z"},
    "sevenDay": {"pct": 40.0, "resetsAt": "2026-11-17T01:35:22.583089Z"}},

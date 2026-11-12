@@ -34,7 +34,7 @@ uv tool install git+https://github.com/LeeGyeongPil/limitpilot
 limitpilot --version
 ```
 ```text
-limitpilot 0.3.0
+limitpilot 0.3.1
 ```
 
 설치 없이 저장소에서 바로 실행할 수도 있습니다(이 문서의 명령 앞 `limitpilot` 을 `PYTHONPATH=src python3 -B -m limitpilot` 으로 바꿔 읽으면 됩니다).
@@ -239,7 +239,7 @@ Error: <폴더>/partial.env is missing ANTHROPIC_MODEL, ANTHROPIC_AUTH_TOKEN - a
 limitpilot --demo --lang en doctor
 ```
 ```text
-ok    limitpilot 0.3.0 — Python 3.15.2 on darwin
+ok    limitpilot 0.3.1 — Python 3.15.2 on darwin
 ok    credential store — fake
 ok    ~/.claude.json — oauthAccount found
 ok    daemon not installed — `limitpilot install-daemon` turns on watching
@@ -259,7 +259,7 @@ limitpilot --demo --lang en dashboard --no-open
 Dashboard started: http://127.0.0.1:8748/ (DEMO - practice mock mode)
 ```
 
-출력된 주소를 브라우저로 열면 가짜 데이터로 계정 카드(임계·주간 최대치·상태 배지), 자동 전환 켜기·끄기, 계정 추가 패널을 볼 수 있습니다. 대시보드는 `127.0.0.1` 에서만 열리고 실행할 때마다 새 API 토큰을 씁니다. `--no-open` 없이 실행하면 연습 모드에서는 브라우저를 직접 열지 않고 `Practice mode: open http://127.0.0.1:8748/ in your browser yourself ...` 라고 안내한 뒤 계속 서비스합니다. 끝내려면 Ctrl+C 를 누릅니다.
+출력된 주소를 브라우저로 열면 가짜 데이터로 계정 카드(임계·주간 최대치·상태 배지), 자동 전환 켜기·끄기, 계정 추가 패널을 볼 수 있습니다. 대시보드는 `127.0.0.1` 에서만 열리고 실행할 때마다 새 API 토큰을 씁니다. `--no-open` 없이 실행하면 연습 모드에서는 브라우저를 직접 열지 않고 `Practice mode: open http://127.0.0.1:8748/ in your browser yourself ...` 라고 안내한 뒤 계속 서비스합니다. 끝내려면 Ctrl+C 를 누릅니다. 대시보드는 첫 화면부터 설정 언어로 표시됩니다(저장된 `language` 설정 > `--lang`·`LIMITPILOT_LANG` > OS 로케일 > 영어).
 
 메뉴바 위젯(macOS)은 `limitpilot widget install` 로 내 PC 에서 빌드·설치한 뒤 메뉴바 아이콘(게이지 + `42%` 같은 활성 계정 사용률)으로 엽니다. 계정별 5시간·주간 막대와 다음 후보를 보여 줍니다. Windows 는 같은 명령이 트레이 앱을 만듭니다.
 
@@ -276,7 +276,7 @@ limitpilot --demo --lang en list --json
 ```
 
 ```json
-{"schemaVersion": 1, "version": "0.3.0", "activeSlot": 1, "slots": [
+{"schemaVersion": 1, "version": "0.3.1", "activeSlot": 1, "slots": [
   {"slot": 1, "label": "work", "active": true, "enabled": true, "kind": "oauth", "status": "ok",
    "fiveHour": {"pct": 62.0, "resetsAt": "2026-11-12T06:45:22.583089Z"},
    "sevenDay": {"pct": 40.0, "resetsAt": "2026-11-17T01:35:22.583089Z"}},
