@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.1] - 2026-11-12
+
+### Fixed
+
+- The dashboard's first paint now uses the configured language (saved `language` setting, then `--lang` / `LIMITPILOT_LANG`, then the OS locale, otherwise English). The server stamps it into `<html lang>` and the page script; before, the page always started in Korean and switched after the first `/api/status` response. API and `--json` output are unchanged.
+
 ## [0.3.0] - 2026-11-12
 
 ### Added

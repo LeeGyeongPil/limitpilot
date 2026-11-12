@@ -7,7 +7,7 @@ header and the dashboard health response all read it).
 
 import os as _os
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 # LIMITPILOT_SANDBOX=1 (tests, --demo) 이면 실제 키체인·launchctl·외부 네트워크 호출을
 # 프로세스 전체에서 막는다. 하위 프로세스도 환경변수를 물려받아 같은 가드를 켠다.
