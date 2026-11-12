@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-11-12
+
+### Added
+
+- `list --json` and `status --json` print one machine-readable JSON document on stdout (`schemaVersion` 1: version,
+  active slot, and per slot the label, active/enabled flags, kind, status code and 5h/7d usage with reset time).
+  Keys do not depend on the display language and no tokens or free text are included. Errors are reported as
+  `{"schemaVersion": 1, "error": {"code", "message"}}` with the usual exit code 1. Text output without `--json`
+  is unchanged.
+
 ## [0.2.0] - 2026-11-12
 
 ### Added

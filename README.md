@@ -40,7 +40,7 @@ uv tool install git+https://github.com/LeeGyeongPil/limitpilot
 limitpilot --version
 ```
 ```text
-limitpilot 0.2.0
+limitpilot 0.3.0
 ```
 
 You can also run it straight from the repository without installing (read `limitpilot` at the start of each command in this document as `PYTHONPATH=src python3 -B -m limitpilot`).
@@ -243,7 +243,7 @@ Error: <폴더>/partial.env is missing ANTHROPIC_MODEL, ANTHROPIC_AUTH_TOKEN - a
 limitpilot --demo --lang en doctor
 ```
 ```text
-ok    limitpilot 0.2.0 — Python 3.15.2 on darwin
+ok    limitpilot 0.3.0 — Python 3.15.2 on darwin
 ok    credential store — fake
 ok    ~/.claude.json — oauthAccount found
 ok    daemon not installed — `limitpilot install-daemon` turns on watching
@@ -271,6 +271,39 @@ In the dashboard, the "Switch" button on a slot that is over its weekly max asks
 
 (This document does not yet include pictures of the dashboard or widget. The documentation capture environment could not launch a browser and native apps.)
 
+### Machine-readable output (`--json`)
+
+`limitpilot list --json` (and `status --json`, which is identical) prints one JSON document on stdout instead of the text table, so a status line, tmux, or a script can read usage without parsing text that changes with the language. Diagnostics and the migration notice stay on stderr. The text output without `--json` is unchanged. The keys and values do not depend on `--lang` or `LANG`, and reset times are the stored ISO 8601 strings (not local-formatted).
+
+```bash
+limitpilot --demo --lang en list --json
+```
+
+```json
+{"schemaVersion": 1, "version": "0.3.0", "activeSlot": 1, "slots": [
+  {"slot": 1, "label": "work", "active": true, "enabled": true, "kind": "oauth", "status": "ok",
+   "fiveHour": {"pct": 62.0, "resetsAt": "2026-11-12T06:45:22.583089Z"},
+   "sevenDay": {"pct": 40.0, "resetsAt": "2026-11-17T01:35:22.583089Z"}},
+  {"slot": 3, "label": "side", "active": false, "enabled": true, "kind": "oauth", "status": "quarantined",
+   "fiveHour": null, "sevenDay": null}]}
+```
+
+(The real output is a single line; it is wrapped here for reading, and the middle slot is omitted. The values are from a fresh practice state, before `tour`. After `tour` the active slot is 2 and slot 1 shows 91.0%/41.0%. The reset times differ on every run.)
+
+| Key | Meaning |
+|---|---|
+| `schemaVersion` | Integer, currently `1` |
+| `version` | LimitPilot version |
+| `activeSlot` | Active slot number, or `null` |
+| `slots[].slot`, `label`, `active`, `enabled` | Slot number, the same label as the text output, whether it is the active slot, whether it is enabled (not `[OFF]`) |
+| `slots[].kind` | `oauth`, `setup-token`, `gateway`, or `enterprise` |
+| `slots[].status` | `ok`, `partial`, `snapshot` (last saved usage, live lookup failed), `token-expired`, `quarantined`, or `unknown` (also gateway and setup-token slots, which have no usage) |
+| `slots[].fiveHour`, `sevenDay` | `{"pct": number, "resetsAt": ISO 8601 string or null}`, or `null` when there is no data |
+
+Never included: tokens, API keys, gateway URLs, quarantine reasons, or other free text. No registered slots is not an error (`"slots": []`, exit code 0). `list` may refresh usage over the network, as before. On an error the document is `{"schemaVersion": 1, "error": {"code": "...", "message": "..."}}` on one stdout line, the usual error line stays on stderr, and the exit code is 1; `code` is `error`, `sandbox`, `unexpected`, or `unsupported-platform`. A bad argument still exits with code 2 and a message on stderr only.
+
+Compatibility: adding new keys keeps `schemaVersion`; renaming or removing a key raises it. Read the keys you need and ignore the rest.
+
 ### Getting started with real accounts
 
 ```bash
@@ -293,7 +326,7 @@ limitpilot dashboard                      # Open the local dashboard
 | `login [--alias name]` | Add a new account via the browser (active account unchanged). Refreshes it if it already exists | `limitpilot login` |
 | `gateway-add [--env-file path] [--alias name]` | Register the gateway from the env file ([Step 5](#step-5--register-a-third-party-gateway-as-a-manual-only-slot)) in a manual-only slot | `limitpilot gateway-add` |
 | `remove` / `enable` / `disable` | Unregister a slot / include it in / exclude it from the auto-switch candidates | `limitpilot disable 3` |
-| `list`, `status` | Show usage and status | `limitpilot list` |
+| `list`, `status` [`--json`] | Show usage and status; `--json` prints a machine-readable JSON document ([format](#machine-readable-output---json)) | `limitpilot list --json` |
 | `refresh` | Refresh usage immediately | `limitpilot refresh 2` |
 | `switch [slot] [--force]` | Switch (if no slot is given, the account the tool picks). A named slot already over its weekly max is refused (exit 3) unless you add `--force` | `limitpilot switch 2` |
 | `auto [--once] [--dry-run]` | A loop that watches every 60 seconds (foreground, end with Ctrl+C). `--once` runs a single time; `--dry-run` shows the decision without switching | `limitpilot auto --once --dry-run` |

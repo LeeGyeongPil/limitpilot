@@ -34,7 +34,7 @@ uv tool install git+https://github.com/LeeGyeongPil/limitpilot
 limitpilot --version
 ```
 ```text
-limitpilot 0.2.0
+limitpilot 0.3.0
 ```
 
 설치 없이 저장소에서 바로 실행할 수도 있습니다(이 문서의 명령 앞 `limitpilot` 을 `PYTHONPATH=src python3 -B -m limitpilot` 으로 바꿔 읽으면 됩니다).
@@ -239,7 +239,7 @@ Error: <폴더>/partial.env is missing ANTHROPIC_MODEL, ANTHROPIC_AUTH_TOKEN - a
 limitpilot --demo --lang en doctor
 ```
 ```text
-ok    limitpilot 0.2.0 — Python 3.15.2 on darwin
+ok    limitpilot 0.3.0 — Python 3.15.2 on darwin
 ok    credential store — fake
 ok    ~/.claude.json — oauthAccount found
 ok    daemon not installed — `limitpilot install-daemon` turns on watching
@@ -267,6 +267,39 @@ Dashboard started: http://127.0.0.1:8748/ (DEMO - practice mock mode)
 
 (대시보드·위젯 화면 그림은 이 문서에 아직 없습니다. 문서용 촬영 환경에서 브라우저와 네이티브 앱을 띄울 수 없었습니다.)
 
+### 기계 판독용 출력(`--json`)
+
+`limitpilot list --json`(`status --json` 도 같음)은 텍스트 표 대신 JSON 문서 1개를 stdout 에 냅니다. 상태줄·tmux·스크립트가 언어에 따라 바뀌는 텍스트를 파싱하지 않고 사용량을 읽을 수 있습니다. 진단 메시지와 이전 도구 이관 안내는 stderr 로만 나갑니다. `--json` 없는 텍스트 출력은 그대로입니다. 키와 값은 `--lang`·`LANG` 에 영향받지 않고, 리셋 시각은 저장된 ISO 8601 문자열 그대로입니다(로컬 형식으로 바꾸지 않음).
+
+```bash
+limitpilot --demo --lang en list --json
+```
+
+```json
+{"schemaVersion": 1, "version": "0.3.0", "activeSlot": 1, "slots": [
+  {"slot": 1, "label": "work", "active": true, "enabled": true, "kind": "oauth", "status": "ok",
+   "fiveHour": {"pct": 62.0, "resetsAt": "2026-11-12T06:45:22.583089Z"},
+   "sevenDay": {"pct": 40.0, "resetsAt": "2026-11-17T01:35:22.583089Z"}},
+  {"slot": 3, "label": "side", "active": false, "enabled": true, "kind": "oauth", "status": "quarantined",
+   "fiveHour": null, "sevenDay": null}]}
+```
+
+(실제 출력은 한 줄이며, 읽기 쉽게 줄바꿈했고 가운데 슬롯은 생략했습니다. 값은 `tour` 전의 새 연습 상태 기준입니다. `tour` 뒤에는 활성 슬롯이 2, 슬롯 1 이 91.0%/41.0% 로 보입니다. 리셋 시각은 실행마다 다릅니다.)
+
+| 키 | 뜻 |
+|---|---|
+| `schemaVersion` | 정수, 현재 `1` |
+| `version` | LimitPilot 버전 |
+| `activeSlot` | 활성 슬롯 번호 또는 `null` |
+| `slots[].slot`, `label`, `active`, `enabled` | 슬롯 번호, 텍스트 출력과 같은 이름표, 활성 슬롯 여부, 사용 여부(`[OFF]` 아님) |
+| `slots[].kind` | `oauth`, `setup-token`, `gateway`, `enterprise` 중 하나 |
+| `slots[].status` | `ok`, `partial`, `snapshot`(마지막 저장 사용량, 실시간 조회 실패), `token-expired`, `quarantined`, `unknown`(사용량이 없는 게이트웨이·setup-token 슬롯 포함) |
+| `slots[].fiveHour`, `sevenDay` | `{"pct": 숫자, "resetsAt": ISO 8601 문자열 또는 null}`, 데이터가 없으면 `null` |
+
+토큰·API 키·게이트웨이 주소·격리 사유 등 자유 텍스트는 들어가지 않습니다. 등록된 슬롯이 없는 것은 오류가 아닙니다(`"slots": []`, 종료 코드 0). `list` 는 예전처럼 네트워크로 사용량을 갱신할 수 있습니다. 오류가 나면 stdout 한 줄에 `{"schemaVersion": 1, "error": {"code": "...", "message": "..."}}` 를 내고, 평소 오류 줄은 stderr 에 남으며 종료 코드는 1 입니다. `code` 는 `error`, `sandbox`, `unexpected`, `unsupported-platform` 중 하나입니다. 인자를 잘못 주면 예전처럼 종료 코드 2 와 stderr 메시지뿐입니다.
+
+호환성: 키를 추가해도 `schemaVersion` 은 그대로이고, 키 이름을 바꾸거나 지울 때만 올립니다. 필요한 키만 읽고 나머지는 무시하세요.
+
 ### 실제 계정으로 시작하기
 
 ```bash
@@ -289,7 +322,7 @@ limitpilot dashboard                      # 로컬 대시보드 열기
 | `login [--alias 이름]` | 브라우저로 새 계정 추가(활성 무변경). 이미 있는 계정이면 갱신 | `limitpilot login` |
 | `gateway-add [--env-file 경로] [--alias 이름]` | env 파일([5단계](#5단계--서드파티-게이트웨이를-수동-전용-슬롯으로-등록))의 게이트웨이를 수동 전용 슬롯에 등록 | `limitpilot gateway-add` |
 | `remove` / `enable` / `disable` | 슬롯 등록 해제 / 자동 전환 후보에 넣기 / 빼기 | `limitpilot disable 3` |
-| `list`, `status` | 사용량·상태 표시 | `limitpilot list` |
+| `list`, `status` [`--json`] | 사용량·상태 표시, `--json` 은 기계 판독용 JSON 문서 출력([형식](#기계-판독용-출력--json)) | `limitpilot list --json` |
 | `refresh` | 사용량 즉시 새로고침 | `limitpilot refresh 2` |
 | `switch [슬롯] [--force]` | 전환(슬롯 생략 시 도구가 고른 계정). 지정한 슬롯이 이미 주간 최대치를 넘었으면 `--force` 없이는 멈춥니다(종료 코드 3) | `limitpilot switch 2` |
 | `auto [--once] [--dry-run]` | 60초마다 감시하는 루프(포그라운드, Ctrl+C 로 끝). `--once` 는 1회만, `--dry-run` 은 결정만 보여 주고 전환하지 않음 | `limitpilot auto --once --dry-run` |
