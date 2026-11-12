@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko">
+<html lang="__DASHBOARD_LANG__">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -531,32 +531,32 @@ try{const t=localStorage.getItem("limitpilot-theme");if(t==="light"||t==="dark")
     </div>
     <div class="grow"></div>
     <button class="theme-btn" id="refreshAllBtn" onclick="refreshAll(this)"
-            aria-label="전체 사용량 새로고침" title="전체 사용량 새로고침"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+            aria-label="Refresh all usage" title="Refresh all usage"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
   stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 4v5h-5"/></svg></button>
     <button class="theme-btn" id="themeBtn" onclick="cycleTheme()"
-            aria-label="테마 전환" title="테마: 시스템"></button>
-    <span class="live" id="updated"><span class="pulse"></span>연결 중…</span>
+            aria-label="Switch theme" title="Theme: System"></button>
+    <span class="live" id="updated"><span class="pulse"></span>Connecting…</span>
   </div>
   <div class="setbar">
     <div class="thr-box">
-      <span class="lbl" id="thrLbl">세션 임계</span>
+      <span class="lbl" id="thrLbl">Session threshold</span>
       <input type="range" id="thr" min="50" max="99" step="1" value="90"
-             aria-label="세션 임계">
+             aria-label="Session threshold (global)">
       <b id="thrVal">90%</b>
     </div>
     <div class="thr-box">
-      <span class="lbl" id="wthrLbl">주간 임계</span>
+      <span class="lbl" id="wthrLbl">Weekly threshold</span>
       <input type="range" id="wthr" min="50" max="99" step="1" value="90"
-             aria-label="주간 임계">
+             aria-label="Weekly threshold (global)">
       <b id="wthrVal">90%</b>
-      <button class="thr-follow" id="wthrFollow" onclick="followSessionThreshold()" hidden>세션과 같게</button>
+      <button class="thr-follow" id="wthrFollow" onclick="followSessionThreshold()" hidden>Match session</button>
       <span class="sub" id="wthrSub"></span>
     </div>
     <div class="grow"></div>
-    <button class="pill" id="autoBtn" onclick="toggleAutoSwitch()" aria-pressed="false"><span class="dot"></span><span id="autoLbl">자동 전환</span></button>
-    <button class="pill" id="kaBtn" onclick="toggleKeepalive()" aria-pressed="false"><span class="dot"></span><span id="kaLbl">유지 호출</span></button>
-    <button class="pill" id="prioBtn" onclick="togglePriority()"><span class="dot"></span><span id="prioLbl">리셋 임박 우선</span></button>
-    <button class="pill" id="burnBtn" onclick="toggleFinalBurn()"><span class="dot"></span><span id="burnLbl">리셋 전 소진</span></button>
+    <button class="pill" id="autoBtn" onclick="toggleAutoSwitch()" aria-pressed="false"><span class="dot"></span><span id="autoLbl">Auto-switch</span></button>
+    <button class="pill" id="kaBtn" onclick="toggleKeepalive()" aria-pressed="false"><span class="dot"></span><span id="kaLbl">Keep-alive</span></button>
+    <button class="pill" id="prioBtn" onclick="togglePriority()"><span class="dot"></span><span id="prioLbl">Expiring first</span></button>
+    <button class="pill" id="burnBtn" onclick="toggleFinalBurn()"><span class="dot"></span><span id="burnLbl">Use-up before reset</span></button>
   </div>
   <div id="banner"></div>
   <div id="board"></div>
@@ -587,8 +587,12 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g,
   (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 // UI 언어 — /api/status의 language(settings.language)를 따라간다 (위젯 L()과 동일 규약).
-// 첫 응답 전/서버 다운 시에도 지난 언어로 그리도록 localStorage에 기억한다
-let LANG = localStorage.getItem("limitpilot-lang") === "en" ? "en" : "ko";
+// 첫 응답 전/서버 다운 시에도 같은 언어로 그리도록 서버가 설정 언어를 페이지에 새긴다.
+// 우선순위: 서버가 새긴 값(en|ko) → (치환 안 된 경우만) localStorage → 브라우저 언어 → en
+const SERVER_LANG = "__DASHBOARD_LANG__";
+let LANG = SERVER_LANG === "en" || SERVER_LANG === "ko" ? SERVER_LANG
+  : (["en", "ko"].includes(localStorage.getItem("limitpilot-lang")) ? localStorage.getItem("limitpilot-lang")
+    : (String(navigator.language || "").toLowerCase().startsWith("ko") ? "ko" : "en"));
 const L = (ko, en) => (LANG === "en" ? en : ko);
 
 // 심각도: 아이콘 모양 + 라벨이 색과 함께 상태를 전달(색 단독 금지)
@@ -2030,6 +2034,16 @@ document.documentElement.lang = LANG;
 $("thrLbl").textContent = L("세션 임계", "Session threshold");
 $("wthrLbl").textContent = L("주간 임계", "Weekly threshold");
 $("updated").innerHTML = `<span class="pulse"></span>${L("연결 중…", "Connecting…")}`;
+// 정적 마크업은 영어 기본값 — 한국어 설정이면 첫 페인트에서 라벨·aria-label·title 도 한국어로 맞춘다
+$("thr").setAttribute("aria-label", L("세션 임계(전역)", "Session threshold (global)"));
+$("wthr").setAttribute("aria-label", L("주간 임계(전역)", "Weekly threshold (global)"));
+$("wthrFollow").textContent = L("세션과 같게", "Match session");
+$("autoLbl").textContent = L("자동 전환", "Auto-switch");
+$("kaLbl").textContent = L("유지 호출", "Keep-alive");
+$("prioLbl").textContent = L("리셋 임박 우선", "Expiring first");
+$("burnLbl").textContent = L("리셋 전 소진", "Use-up before reset");
+$("refreshAllBtn").title = L("전체 사용량 새로고침", "Refresh all usage");
+$("refreshAllBtn").setAttribute("aria-label", $("refreshAllBtn").title);
 syncSliderFill();
 refresh();
 scheduleRefresh();

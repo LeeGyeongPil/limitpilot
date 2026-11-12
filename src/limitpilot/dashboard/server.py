@@ -83,6 +83,7 @@ BUILD_ID = _compute_build_id()
 BUILD_PLACEHOLDER = b"__DASHBOARD_BUILD__"
 TOKEN_PLACEHOLDER = b"__DASHBOARD_TOKEN__"
 DEMO_PLACEHOLDER = b"__DASHBOARD_DEMO__"
+LANG_PLACEHOLDER = b"__DASHBOARD_LANG__"
 STALE_STOP_TIMEOUT_S = 5.0     # 이전 빌드 서버 종료 대기
 REOPEN_WAIT_S = 8.0            # 교체 후 기존 창이 새로고침해 다시 붙기를 기다리는 시간
 
@@ -486,6 +487,15 @@ def edit_gateway(n: int, body: dict) -> dict:
     }
 
 
+def _page_lang() -> str:
+    """Language for the first paint: saved setting > --lang/LIMITPILOT_LANG > locale > en."""
+    try:
+        lang = state.get_settings(state.load_state())["language"]
+    except Exception:  # unreadable state must not break the page
+        lang = i18n.default_lang()
+    return lang if lang in ("en", "ko") else "en"  # whitelist: never inject anything else
+
+
 class Handler(BaseHTTPRequestHandler):
     def _local_host_ok(self) -> bool:
         # DNS rebinding 차단: 브라우저가 보낸 Host 가 우리 루프백 주소여야 한다
@@ -699,7 +709,8 @@ class Handler(BaseHTTPRequestHandler):
                 return
             # 페이지에 서버 빌드·실행별 토큰·연습 모드 표식을 새긴다
             token = getattr(self.server, "api_token", "") or ""
-            body = (body.replace(BUILD_PLACEHOLDER, BUILD_ID.encode())
+            body = (body.replace(LANG_PLACEHOLDER, _page_lang().encode())
+                    .replace(BUILD_PLACEHOLDER, BUILD_ID.encode())
                     .replace(TOKEN_PLACEHOLDER, token.encode())
                     .replace(DEMO_PLACEHOLDER, b"1" if _demo_mode() else b""))
             self._send(200, "text/html; charset=utf-8", body)
