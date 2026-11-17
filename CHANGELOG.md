@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.2] - 2026-11-18
+
+### Fixed
+
+- README step 5 now creates `gateway.example.env` before `gateway-add --env-file`, so the walkthrough works from an installed copy. The English README no longer shows a Korean folder placeholder.
+
 ## [0.3.1] - 2026-11-12
 
 ### Fixed
