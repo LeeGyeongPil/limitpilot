@@ -214,6 +214,12 @@ GATEWAY_ALIAS=my-gateway
 `#` 로 시작하는 줄은 주석으로 건너뜁니다. 값 뒤에 붙인 주석은 값의 일부가 되니 쓰지 마세요. 기본 파일 이름인 `gateway.local.env` 는 이 저장소의 `.gitignore` 에 들어 있습니다. 토큰이 담기니 커밋·공유하지 마세요.
 
 ```bash
+cat > gateway.example.env <<'EOF'
+ANTHROPIC_BASE_URL=https://gateway.example.com
+ANTHROPIC_MODEL=example-model
+ANTHROPIC_AUTH_TOKEN=replace-me
+GATEWAY_ALIAS=my-gateway
+EOF
 limitpilot --demo --lang en gateway-add --env-file gateway.example.env
 limitpilot --demo --lang en list
 ```

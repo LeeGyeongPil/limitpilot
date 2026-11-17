@@ -218,6 +218,12 @@ GATEWAY_ALIAS=my-gateway
 Lines starting with `#` are skipped as comments. A comment placed after a value becomes part of the value, so don't write one. The default file name `gateway.local.env` is in this repository's `.gitignore`. It holds a token, so do not commit or share it.
 
 ```bash
+cat > gateway.example.env <<'EOF'
+ANTHROPIC_BASE_URL=https://gateway.example.com
+ANTHROPIC_MODEL=example-model
+ANTHROPIC_AUTH_TOKEN=replace-me
+GATEWAY_ALIAS=my-gateway
+EOF
 limitpilot --demo --lang en gateway-add --env-file gateway.example.env
 limitpilot --demo --lang en list
 ```
@@ -230,11 +236,11 @@ Active slot: 2 · 4 account(s) · threshold 90% · priority expiring · auto-swi
   Slot 4: my-gateway  third-party gateway · example-model · https://gateway.example.com · manual only
 ```
 
-If the file is missing or a key is absent, it tells you what to fix. Key values are never printed in the error (`<폴더>` in the path is actually the current folder; it means "folder").
+If the file is missing or a key is absent, it tells you what to fix. Key values are never printed in the error (`<folder>` in the path is actually the current folder).
 
 ```text
-Error: The gateway env file <폴더>/gateway.local.env does not exist. Create it with KEY=VALUE lines: ANTHROPIC_BASE_URL=https://<gateway>, ANTHROPIC_MODEL=<model>, ANTHROPIC_AUTH_TOKEN=<token> (or GATEWAY_AUTH_MODE=api-key with ANTHROPIC_API_KEY=<key>), optional GATEWAY_ALIAS=<name>. Or point to another file with --env-file <path>.
-Error: <폴더>/partial.env is missing ANTHROPIC_MODEL, ANTHROPIC_AUTH_TOKEN - add them as KEY=VALUE lines (ANTHROPIC_BASE_URL must be an https URL)
+Error: The gateway env file <folder>/gateway.local.env does not exist. Create it with KEY=VALUE lines: ANTHROPIC_BASE_URL=https://<gateway>, ANTHROPIC_MODEL=<model>, ANTHROPIC_AUTH_TOKEN=<token> (or GATEWAY_AUTH_MODE=api-key with ANTHROPIC_API_KEY=<key>), optional GATEWAY_ALIAS=<name>. Or point to another file with --env-file <path>.
+Error: <folder>/partial.env is missing ANTHROPIC_MODEL, ANTHROPIC_AUTH_TOKEN - add them as KEY=VALUE lines (ANTHROPIC_BASE_URL must be an https URL)
 ```
 
 ### Step 6 — Check the environment
